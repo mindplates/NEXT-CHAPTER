@@ -1,0 +1,12 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code - local overrides are per-developer, not shared
+.claude/settings.local.json
+.claude/sessions/
