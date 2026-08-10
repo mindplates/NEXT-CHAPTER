@@ -1,0 +1,13 @@
+// 인증 경로 두 개를 모두 담당한다.
+//   일반 사용자 — OAuth2 소셜 로그인 → JWT
+//   관리자      — 자체 계정 → JWT, 역할 ADMIN
+// 관리자를 분리하는 이유는 편의가 아니라 가용성이다. 소셜 제공자가 죽었을 때
+// 승인 대기열과 비용 설정에 접근할 수 없는 상태는 받아들일 수 없다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

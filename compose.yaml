@@ -1,0 +1,148 @@
+# 로컬 개발 환경 — 저장소 5개를 한 번에 띄운다.
+#
+#   docker compose up -d
+#
+# 포트는 34000번대를 100 단위로 배정한다. 기본 포트를 그대로 쓰지 않는 이유는 개발 머신에
+# 이미 떠 있는 다른 프로젝트의 인스턴스와 충돌하기 때문이다. 구간을 벌려두면 서비스가 부가
+# 포트를 자기 구간 안에서 해결할 수 있다 (예: MinIO 콘솔 34701).
+#
+# 전부 호스트 루프백(127.0.0.1)에만 바인딩한다. 0.0.0.0 으로 노출하면 개발 머신이 그대로
+# 외부 스캐너의 표적이 된다.
+
+services:
+  # --- PostgreSQL + pgvector — 진실의 원천 -----------------------------------
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: nextchapter-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nextchapter}
+      POSTGRES_USER: ${POSTGRES_USER:-nextchapter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nextchapter}
+    ports:
+      - '127.0.0.1:34200:5432'
+    volumes:
+      - ./docker/postgres/data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-nextchapter} -d ${POSTGRES_DB:-nextchapter}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextchapter-network
+
+  # --- Neo4j — 챕터 그래프 (파생) --------------------------------------------
+  neo4j:
+    image: neo4j:5-community
+    container_name: nextchapter-neo4j
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-nextchapter}
+      NEO4J_server_memory_heap_max__size: 512m
+    ports:
+      - '127.0.0.1:34300:7687'  # Bolt
+      - '127.0.0.1:34400:7474'  # HTTP 브라우저
+    volumes:
+      - ./docker/neo4j/data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:7474 > /dev/null || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    networks:
+      - nextchapter-network
+
+  # --- Kafka (KRaft, 단일 노드) — 생성 잡 체인 · outbox · 신호 ---------------
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: nextchapter-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # 호스트를 비워 모든 인터페이스에 바인딩한다. 0.0.0.0 을 문자로 쓰면 브로커가
+      # advertised.listeners 로 그대로 물려받아 "nonroutable meta-address" 로 기동에 실패한다.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # 호스트에서 붙는 클라이언트가 보는 주소. 컨테이너 밖 포트와 일치해야 한다.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:34500
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # base64 UUID 22자여야 한다. 임의 문자열을 넣으면 스토리지 포맷 단계에서 죽는다.
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-5L6g3nShT-eMCtK--X86sw}
+    ports:
+      - '127.0.0.1:34500:9092'
+    volumes:
+      - ./docker/kafka/data:/var/lib/kafka/data
+    healthcheck:
+      test: ['CMD-SHELL', '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    networks:
+      - nextchapter-network
+
+  # --- Redis — 블록 문서 캐시 (파생) -----------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: nextchapter-redis
+    ports:
+      - '127.0.0.1:34600:6379'
+    volumes:
+      - ./docker/redis/data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextchapter-network
+
+  # --- MinIO — 파생 자산 바이너리 (이미지 · 영상 · PPT) ----------------------
+  # M6 까지는 쓰이지 않지만 지금 띄운다. compose 파일을 나중에 다시 여는 것보다 싸고
+  # 포트 배정이 한 번에 끝난다.
+  # 콘솔: http://localhost:34701
+  minio:
+    image: minio/minio:latest
+    container_name: nextchapter-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - '127.0.0.1:34700:9000'  # S3 API
+      - '127.0.0.1:34701:9001'  # 콘솔 — 자기 구간(347xx) 안에서 해결
+    volumes:
+      - ./docker/minio/data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nextchapter-network
+
+  # --- MinIO 초기화 — 자산 버킷 생성 ------------------------------------------
+  minio-init:
+    image: minio/mc:latest
+    container_name: nextchapter-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      /usr/bin/mc mb --ignore-existing local/nextchapter-assets;
+      exit 0;
+      "
+    networks:
+      - nextchapter-network
+
+networks:
+  nextchapter-network:
+    driver: bridge

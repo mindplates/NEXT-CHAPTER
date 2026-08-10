@@ -1,0 +1,11 @@
+// 유스케이스와 포트. 어댑터를 알지 못한다 — out 포트 인터페이스만 선언하고
+// 구현은 adapter 쪽에 둔다. 테스트는 out 포트를 목킹한 단위 테스트.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation 'org.springframework:spring-tx'
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}

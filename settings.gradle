@@ -1,0 +1,27 @@
+rootProject.name = 'NEXT-CHAPTER'
+
+include 'nextchapter-common'
+include 'nextchapter-domain'
+include 'nextchapter-application'
+include 'nextchapter-adapter'
+include 'nextchapter-adapter:web'
+include 'nextchapter-adapter:messaging'
+include 'nextchapter-adapter:persistence'
+include 'nextchapter-adapter:graph'
+include 'nextchapter-adapter:cache'
+include 'nextchapter-adapter:storage'
+include 'nextchapter-adapter:ai'
+include 'nextchapter-adapter:media'
+include 'nextchapter-adapter:security'
+include 'nextchapter-bootstrap'
+
+project(':nextchapter-adapter').projectDir = file('nextchapter-adapter')
+project(':nextchapter-adapter:web').projectDir = file('nextchapter-adapter/web')
+project(':nextchapter-adapter:messaging').projectDir = file('nextchapter-adapter/messaging')
+project(':nextchapter-adapter:persistence').projectDir = file('nextchapter-adapter/persistence')
+project(':nextchapter-adapter:graph').projectDir = file('nextchapter-adapter/graph')
+project(':nextchapter-adapter:cache').projectDir = file('nextchapter-adapter/cache')
+project(':nextchapter-adapter:storage').projectDir = file('nextchapter-adapter/storage')
+project(':nextchapter-adapter:ai').projectDir = file('nextchapter-adapter/ai')
+project(':nextchapter-adapter:media').projectDir = file('nextchapter-adapter/media')
+project(':nextchapter-adapter:security').projectDir = file('nextchapter-adapter/security')

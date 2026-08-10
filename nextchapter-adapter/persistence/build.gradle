@@ -1,0 +1,14 @@
+// out 어댑터 — PostgreSQL. 챕터 블록 문서·버전·카탈로그·레이어·잡·승인 이력의
+// 진실의 원천. 주제 임베딩(pgvector)도 여기. 테스트는 Testcontainers.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Testcontainers 2.x 는 모듈 아티팩트를 testcontainers-* 로 바꿨다 (구 org.testcontainers:postgresql).
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+}

@@ -1,0 +1,4 @@
+// 순수 도메인 — 프레임워크에 의존하지 않는다. 테스트는 의존 없는 단위 테스트.
+dependencies {
+    implementation project(':nextchapter-common')
+}

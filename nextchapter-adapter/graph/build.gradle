@@ -1,0 +1,9 @@
+// out 어댑터 — Neo4j. 챕터 ID·관계·챕터 임베딩만 갖는 얇은 그래프.
+// 본문은 여기 없다(Postgres 가 원천). 파생 저장소이므로 통째 재구축이 가능해야 한다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

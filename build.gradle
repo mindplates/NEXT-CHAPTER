@@ -1,0 +1,130 @@
+plugins {
+    id 'org.springframework.boot' version '4.0.6' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+allprojects {
+    group = 'com.mindplates'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+        maven { url 'https://repo.spring.io/milestone' }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom 'org.springframework.boot:spring-boot-dependencies:4.0.6'
+        }
+    }
+
+    dependencies {
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testImplementation 'org.assertj:assertj-core'
+        testImplementation 'org.mockito:mockito-core'
+        testImplementation 'org.mockito:mockito-junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs.add('-parameters')
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.named('test') {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            csv.required = true
+            html.required = true
+            xml.required = true
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 헥사고날 의존 방향 검증
+//
+// 골격을 세우는 지금이 이 규칙을 강제할 수 있는 유일하게 싼 타이밍이다. 나중에
+// 넣으면 그때는 이미 깨져 있고, 되돌리는 비용이 붙는다.
+//
+//   common      →  (없음)
+//   domain      →  common
+//   application →  common, domain
+//   adapter/*   →  common, domain, application          ← 어댑터끼리 의존 금지
+//   bootstrap   →  전부                                  ← 조립만 하는 모듈
+// ---------------------------------------------------------------------------
+
+def COMMON = ':nextchapter-common'
+def DOMAIN = ':nextchapter-domain'
+def APPLICATION = ':nextchapter-application'
+
+def adapterAllowed = [COMMON, DOMAIN, APPLICATION].toSet()
+def moduleAllowed = [
+        (COMMON)                 : [].toSet(),
+        (DOMAIN)                 : [COMMON].toSet(),
+        (APPLICATION)            : [COMMON, DOMAIN].toSet(),
+        ':nextchapter-adapter'   : [].toSet(),
+]
+
+subprojects { sp ->
+    sp.tasks.register('checkModuleDependencies') {
+        group = 'verification'
+        description = '헥사고날 의존 방향을 검증한다. 허용되지 않은 모듈 간 의존은 빌드 실패다.'
+    }
+
+    sp.afterEvaluate {
+        def path = sp.path
+        def allowed
+        if (path == ':nextchapter-bootstrap') {
+            allowed = sp.rootProject.subprojects.collect { it.path }.toSet()
+        } else if (path.startsWith(':nextchapter-adapter:')) {
+            allowed = adapterAllowed
+        } else {
+            allowed = moduleAllowed.getOrDefault(path, [].toSet())
+        }
+
+        def declared = sp.configurations
+                .collectMany { c -> c.dependencies.withType(ProjectDependency).collect { d -> d.path } }
+                .toSet()
+        def violations = (declared - allowed).toSorted()
+
+        sp.tasks.named('checkModuleDependencies').configure {
+            doLast {
+                if (!violations.isEmpty()) {
+                    throw new GradleException(
+                            "의존 방향 위반 — ${path} 이(가) ${violations.join(', ')} 에 의존한다.\n" +
+                            "허용: ${allowed.isEmpty() ? '(없음)' : allowed.toSorted().join(', ')}")
+                }
+            }
+        }
+
+        sp.tasks.named('check').configure {
+            dependsOn sp.tasks.named('checkModuleDependencies')
+        }
+    }
+}

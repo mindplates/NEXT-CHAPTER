@@ -1,0 +1,7 @@
+// out 어댑터 — TTS · 영상 렌더 · PPT. 실제 구현은 M6(딜리버리 확장).
+// 수단(자체 운영 vs 클라우드)이 아직 미결정이라 M0 에서는 외부 의존을 넣지 않는다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+}

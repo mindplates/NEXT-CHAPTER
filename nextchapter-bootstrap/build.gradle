@@ -1,0 +1,31 @@
+// 조립만 하는 모듈. 여기에 도메인 로직을 두지 않는다.
+plugins {
+    id 'org.springframework.boot'
+}
+
+bootRun {
+    workingDir = rootProject.projectDir
+}
+
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation project(':nextchapter-adapter:web')
+    implementation project(':nextchapter-adapter:messaging')
+    implementation project(':nextchapter-adapter:persistence')
+    implementation project(':nextchapter-adapter:graph')
+    implementation project(':nextchapter-adapter:cache')
+    implementation project(':nextchapter-adapter:storage')
+    implementation project(':nextchapter-adapter:ai')
+    implementation project(':nextchapter-adapter:media')
+    implementation project(':nextchapter-adapter:security')
+
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

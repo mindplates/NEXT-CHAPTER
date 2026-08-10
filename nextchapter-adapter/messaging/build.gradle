@@ -1,0 +1,12 @@
+// in/out 어댑터 — Kafka. 생성 잡 체인, outbox 발행, 신호 이벤트.
+// 테스트는 Testcontainers 로 실제 Kafka 에 붙인다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    // Boot 4 는 자동설정을 기술별 모듈로 쪼갰다. spring-kafka 만 넣으면 KafkaAdmin 이
+    // 만들어지지 않으므로 starter 를 쓴다.
+    implementation 'org.springframework.boot:spring-boot-starter-kafka'
+    implementation 'org.springframework.boot:spring-boot-health'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

@@ -1,0 +1,11 @@
+// out 어댑터 — LLM 프로바이더. 독립 모듈인 이유는 벤더 교체 가능성 때문이다.
+// 모델을 코드에 박지 않고 단계별로 관리 화면에서 지정한다. API 키도 콘솔에서 관리한다
+// (코드·환경변수 하드코딩 금지). 테스트는 LLM 응답 스터브.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework:spring-web'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

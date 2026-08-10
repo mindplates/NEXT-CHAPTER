@@ -1,0 +1,9 @@
+// out 어댑터 — Redis. 블록 문서 캐시.
+// 키에 버전과 형태를 포함하므로(chapter:{id}:v{version}:{format}) 무효화 로직이 없다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

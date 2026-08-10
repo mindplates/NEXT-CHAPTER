@@ -1,0 +1,14 @@
+// out 어댑터 — 오브젝트 스토리지. 파생 자산 바이너리(이미지·영상·PPT).
+//
+// M0 에서는 SDK 를 넣지 않는다. 스토리지 수단(자체 운영 vs 클라우드)이 M6 의 미결정
+// 항목이라, 지금 SDK 를 고르면 그 결정을 코드가 먼저 해버린다. 연결 확인은 S3 호환
+// 엔드포인트의 헬스 경로를 HTTP 로 찌르는 것으로 충분하다.
+dependencies {
+    implementation project(':nextchapter-common')
+    implementation project(':nextchapter-domain')
+    implementation project(':nextchapter-application')
+    implementation 'org.springframework:spring-web'
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.springframework.boot:spring-boot-health'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
