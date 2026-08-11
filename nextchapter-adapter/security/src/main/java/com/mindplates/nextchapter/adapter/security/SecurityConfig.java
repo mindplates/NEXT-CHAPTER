@@ -18,9 +18,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .anyRequest().authenticated())
+        return http.authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health", "/actuator/health/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
                 .httpBasic(basic -> {})
                 .build();
     }

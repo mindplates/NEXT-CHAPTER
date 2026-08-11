@@ -62,9 +62,13 @@ http://localhost:34100 — `/api`와 `/actuator`는 백엔드로 프록시된다
 ## 빌드와 테스트
 
 ```bash
-./gradlew build                      # 빌드 + 테스트 + 커버리지 + 의존 방향 검증
+./gradlew build                      # 빌드 + 테스트 + 커버리지 + 포맷 + 의존 방향 검증
+./gradlew spotlessApply              # 포맷 자동 교정
 ./gradlew checkModuleDependencies    # 헥사고날 의존 방향만 검증
 ```
+
+포맷은 Spotless(palantir-java-format, 4-space)가 `check`에서 강제한다. 편집 훅으로 돌리지 않는
+이유는 편집마다 Gradle을 부르면 수 초가 붙기 때문이다 — 어긋난 포맷은 빌드가 잡으면 충분하다.
 
 어댑터 통합 테스트는 Testcontainers로 실제 저장소에 붙으므로 **Docker가 떠 있어야 한다.**
 (랜덤 포트를 쓰므로 위 포트 표와 무관하고, `docker compose`가 떠 있을 필요는 없다.)

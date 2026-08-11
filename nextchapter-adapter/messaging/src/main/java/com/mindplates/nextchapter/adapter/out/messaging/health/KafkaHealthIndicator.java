@@ -31,12 +31,16 @@ public class KafkaHealthIndicator implements HealthIndicator {
     @Override
     public Health health() {
         try (AdminClient client = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-            DescribeClusterOptions options =
-                    new DescribeClusterOptions().timeoutMs((int) TIMEOUT.toMillis());
+            DescribeClusterOptions options = new DescribeClusterOptions().timeoutMs((int) TIMEOUT.toMillis());
             DescribeClusterResult cluster = client.describeCluster(options);
             String clusterId = cluster.clusterId().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-            int nodeCount = cluster.nodes().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).size();
-            return Health.up().withDetail("clusterId", clusterId).withDetail("nodes", nodeCount).build();
+            int nodeCount = cluster.nodes()
+                    .get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+                    .size();
+            return Health.up()
+                    .withDetail("clusterId", clusterId)
+                    .withDetail("nodes", nodeCount)
+                    .build();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Health.down().withDetail("error", describe(e)).build();

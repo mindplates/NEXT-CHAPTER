@@ -112,9 +112,13 @@ HTTP 로 확인한다 — 스토리지 수단이 M6 의 미결정 항목이라 �
 
 ## 남은 정리 작업
 
-- [ ] **ecc 훅의 Java 전환** — 현재 edit 훅이 TypeScript 전제(Prettier, `tsc`)다. 백엔드가
-      Spring Boot/Java이므로 포매터 + 컴파일 체크로 교체해야 한다. 포크의 `hooks/hooks.json`
-      수정 건이라 이 저장소 밖 작업이다.
+- [x] **Java 포매터** — Spotless(palantir-java-format, 4-space)를 `check` 에 물렸다.
+      google-java-format 이 아닌 이유는 2-space 라 WORKS 관례와 어긋나기 때문이다.
+      **편집 훅이 아니라 빌드에서 강제한다** — 편집마다 Gradle 을 부르면 수 초가 붙어
+      실용성이 없고, 어긋난 포맷은 빌드가 잡으면 충분하다. 실제 위반을 넣어 실패를 확인했다.
+- [ ] **ecc 훅의 Java 인지** — edit 훅이 TypeScript 전제다. 다만 **교체가 아니라 추가**다 —
+      `nextchapter-react-app` 이 TypeScript라 Prettier·tsc 훅은 계속 필요하다. 포크의
+      `hooks/hooks.json` 수정 건이라 이 저장소 밖 작업이다.
 - [ ] **커버리지 80% 게이트** — 리포트는 나오지만 게이트는 아직 없다. M1에서 건다.
 - [x] **CI 실측** — 원격에서 초록. Testcontainers 가 러너에서 실제로 컨테이너를 띄워
       pgvector 확장까지 검증하는 것을 확인했다. 이 과정에서 `.gitignore` 결함을 잡았다.

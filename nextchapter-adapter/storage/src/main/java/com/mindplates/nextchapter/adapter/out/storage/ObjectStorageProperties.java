@@ -11,10 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param timeout    헬스 확인 타임아웃
  */
 @ConfigurationProperties(prefix = "nextchapter.storage")
-public record ObjectStorageProperties(
-        String endpoint,
-        String healthPath,
-        Duration timeout) {
+public record ObjectStorageProperties(String endpoint, String healthPath, Duration timeout) {
 
     public ObjectStorageProperties {
         healthPath = (healthPath == null || healthPath.isBlank()) ? "/minio/health/live" : healthPath;

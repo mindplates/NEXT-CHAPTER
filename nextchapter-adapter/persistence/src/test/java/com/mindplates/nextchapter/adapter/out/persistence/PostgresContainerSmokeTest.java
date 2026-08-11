@@ -10,8 +10,8 @@ import java.sql.Statement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -44,8 +44,8 @@ class PostgresContainerSmokeTest {
 
             statement.execute("CREATE EXTENSION IF NOT EXISTS vector");
 
-            try (ResultSet result = statement.executeQuery(
-                    "SELECT extname FROM pg_extension WHERE extname = 'vector'")) {
+            try (ResultSet result =
+                    statement.executeQuery("SELECT extname FROM pg_extension WHERE extname = 'vector'")) {
                 assertThat(result.next()).isTrue();
                 assertThat(result.getString("extname")).isEqualTo("vector");
             }

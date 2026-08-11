@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '4.0.6' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.diffplug.spotless' version '7.0.2' apply false
 }
 
 allprojects {
@@ -17,6 +18,22 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'com.diffplug.spotless'
+
+    // 포매팅은 편집 훅이 아니라 빌드에서 강제한다. 편집마다 Gradle 을 부르면 매 편집에
+    // 수 초가 붙어 실용성이 없고, 포맷이 어긋난 채로 커밋되는 것은 빌드가 잡으면 충분하다.
+    //
+    // palantirJavaFormat 을 쓰는 이유는 4-space 라 WORKS 관례와 어긋나지 않기 때문이다.
+    // google-java-format 은 2-space 로 강제해 기존 코드와 전부 충돌한다.
+    spotless {
+        java {
+            target 'src/**/*.java'
+            palantirJavaFormat()
+            removeUnusedImports()
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+    }
 
     java {
         toolchain {
