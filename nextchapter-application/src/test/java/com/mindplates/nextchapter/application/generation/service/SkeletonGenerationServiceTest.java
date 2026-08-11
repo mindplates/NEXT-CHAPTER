@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadOutboxEventPort;
+import com.mindplates.nextchapter.application.generation.port.in.SubmitChapterBodyBatchUseCase;
 import com.mindplates.nextchapter.application.generation.port.out.GenerationEventPublisherPort;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
@@ -55,6 +56,9 @@ class SkeletonGenerationServiceTest {
 
     @Mock
     GenerationEventPublisherPort eventPublisher;
+
+    @Mock
+    SubmitChapterBodyBatchUseCase submitChapterBodyBatchUseCase;
 
     @InjectMocks
     SkeletonGenerationService service;
@@ -234,6 +238,38 @@ class SkeletonGenerationServiceTest {
 
         assertThatThrownBy(() -> service.bySkeletonId(SKELETON_ID)).isInstanceOf(EntityNotFoundException.class);
         assertThatThrownBy(() -> service.byTopicId(TOPIC_ID)).isInstanceOf(EntityNotFoundException.class);
+    }
+
+    /**
+     * 두 경로가 함께 돌면 같은 챕터의 본문을 두 번 생성해 비용이 배가 되고, 배치의 할인이 무의미해진다.
+     * 분기가 한 곳에 있어야 "어느 경로로 갔는가"가 한 판정이 된다.
+     */
+    @Test
+    @DisplayName("배치로 제출했으면 개별 메시지를 발행하지 않는다")
+    void batchSubmissionSkipsPerChapterMessages() {
+        stub(SkeletonStatus.GENERATING_OUTLINES);
+        when(loadChapterPort.findBySkeletonId(SKELETON_ID)).thenReturn(List.of(chapter(101L, "a"), chapter(102L, "b")));
+        when(saveSkeletonPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(submitChapterBodyBatchUseCase.submitBodies(SKELETON_ID)).thenReturn(true);
+
+        service.outlinesCompleted(SKELETON_ID);
+
+        verify(eventPublisher, never()).requestBody(anyLong(), anyLong(), anyString());
+    }
+
+    /** 배치가 꺼져 있거나 벤더가 지원하지 않으면 개별 경로로 가야 한다 — 그러지 않으면 뼈대가 갇힌다. */
+    @Test
+    @DisplayName("배치가 제출되지 않으면 챕터마다 발행한다")
+    void noBatchFansOutPerChapter() {
+        stub(SkeletonStatus.GENERATING_OUTLINES);
+        when(loadChapterPort.findBySkeletonId(SKELETON_ID)).thenReturn(List.of(chapter(101L, "a"), chapter(102L, "b")));
+        when(saveSkeletonPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(submitChapterBodyBatchUseCase.submitBodies(SKELETON_ID)).thenReturn(false);
+
+        service.outlinesCompleted(SKELETON_ID);
+
+        verify(eventPublisher).requestBody(SKELETON_ID, 101L, "a");
+        verify(eventPublisher).requestBody(SKELETON_ID, 102L, "b");
     }
 
     /**

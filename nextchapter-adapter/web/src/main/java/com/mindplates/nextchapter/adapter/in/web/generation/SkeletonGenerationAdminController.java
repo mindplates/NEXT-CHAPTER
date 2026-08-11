@@ -1,9 +1,12 @@
 package com.mindplates.nextchapter.adapter.in.web.generation;
 
+import com.mindplates.nextchapter.application.generation.port.in.GetAiBatchJobUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GetGenerationProgressUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase;
+import com.mindplates.nextchapter.application.generation.view.AiBatchJobView;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
 import com.mindplates.nextchapter.common.response.ApiResponse;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +30,7 @@ public class SkeletonGenerationAdminController {
 
     private final StartSkeletonGenerationUseCase startSkeletonGenerationUseCase;
     private final GetGenerationProgressUseCase getGenerationProgressUseCase;
+    private final GetAiBatchJobUseCase getAiBatchJobUseCase;
 
     /** 멱등이다 — 이미 뼈대가 있으면 만들지 않고 진행 상태를 돌려준다. */
     @PostMapping("/topics/{topicId}")
@@ -37,6 +41,15 @@ public class SkeletonGenerationAdminController {
     @GetMapping("/{skeletonId}/progress")
     public ResponseEntity<ApiResponse<GenerationProgressView>> progress(@PathVariable Long skeletonId) {
         return ResponseEntity.ok(ApiResponse.ok(getGenerationProgressUseCase.bySkeletonId(skeletonId)));
+    }
+
+    /**
+     * 이 뼈대의 배치 잡. 진행률만 보면 <b>멈춘 것과 배치를 기다리는 것이 구분되지 않는다</b> — 배치는 최대
+     * 24시간 아무 변화 없이 살아 있다.
+     */
+    @GetMapping("/{skeletonId}/batches")
+    public ResponseEntity<ApiResponse<List<AiBatchJobView>>> batches(@PathVariable Long skeletonId) {
+        return ResponseEntity.ok(ApiResponse.ok(getAiBatchJobUseCase.bySkeletonId(skeletonId)));
     }
 
     @GetMapping("/topics/{topicId}/progress")

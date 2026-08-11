@@ -7,6 +7,12 @@ import com.mindplates.nextchapter.application.admin.service.AiBudgetService;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingClientPort;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingRequest;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingResult;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchClientPort;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchItem;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchItemResult;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchPollRequest;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchPollResult;
+import com.mindplates.nextchapter.application.generation.port.out.LlmBatchSubmitRequest;
 import com.mindplates.nextchapter.application.generation.port.out.LlmCompletionClientPort;
 import com.mindplates.nextchapter.application.generation.port.out.LlmCompletionRequest;
 import com.mindplates.nextchapter.application.generation.port.out.LlmCompletionResult;
@@ -107,6 +113,76 @@ public class AiGateway {
                 .sum();
         return Math.max(1, characters / 4 + 1);
     }
+
+    /** 이 단계에 지정된 벤더가 배치를 지원하는지. 지원하지 않으면 호출부가 개별 호출 경로로 간다. */
+    public boolean supportsBatch(AiStage stage) {
+        return loadAiStageSettingPort
+                .findByStage(stage)
+                .map(setting -> registry.batchClient(setting.vendor()).isPresent())
+                .orElse(false);
+    }
+
+    /**
+     * 배치를 제출한다. 제출은 즉시 끝나고 배치 ID 만 돌아온다.
+     *
+     * <p>예산 판정은 <b>전 항목의 {@code maxTokens} 합</b>으로 한다. 배치 하나가 챕터 수만큼의 호출이므로
+     * 항목 하나 기준으로 판정하면 상한이 사실상 항목 수만큼 뚫린다.
+     *
+     * <p>사용량은 여기서 기록하지 않는다 — 제출 시점에는 아무 토큰도 쓰이지 않았고, 실제 소비량은 결과를
+     * 받을 때 항목마다 온다. 제출 시점에 어림값을 기록하면 결과 시점의 실측과 이중 계상된다.
+     */
+    public BatchSubmission submitBatch(AiStage stage, Long skeletonId, List<LlmBatchItem> items) {
+        if (items.isEmpty()) {
+            throw new InvalidOperationException("빈 배치는 제출할 수 없습니다.");
+        }
+        AiStageSetting setting = requireSetting(stage);
+        LlmBatchClientPort client =
+                registry.batchClient(setting.vendor()).orElseThrow(() -> unsupported(stage, setting.vendor(), "배치"));
+
+        aiBudgetService.requireWithinBudget(skeletonId, totalMaxTokens(items));
+        String batchId =
+                client.submit(new LlmBatchSubmitRequest(setting.model(), decryptedKey(setting.vendor()), items));
+        log.info(
+                "[AI] 배치 제출 stage={} vendor={} model={} items={} batchId={}",
+                stage,
+                setting.vendor(),
+                setting.model(),
+                items.size(),
+                batchId);
+        return new BatchSubmission(batchId, setting.vendor(), setting.model());
+    }
+
+    /**
+     * 제출한 배치를 조회하고, 끝났으면 <b>항목별 사용량을 기록한다.</b>
+     *
+     * <p>벤더와 모델을 인자로 받는 것이 중요하다. 현재 단계 설정을 다시 읽으면, 배치가 살아 있는 동안
+     * (최대 24시간) 관리자가 설정을 바꿨을 때 <b>다른 벤더의 API 로 다른 벤더의 배치 ID 를 묻게 된다</b> —
+     * 그건 "배치를 찾을 수 없음"으로 나타나고 제출한 배치가 조용히 유실된다.
+     */
+    public LlmBatchPollResult pollBatch(AiStage stage, Long skeletonId, AiVendor vendor, String model, String batchId) {
+        LlmBatchClientPort client = registry.batchClient(vendor).orElseThrow(() -> unsupported(stage, vendor, "배치"));
+
+        LlmBatchPollResult result = client.poll(new LlmBatchPollRequest(decryptedKey(vendor), batchId));
+        if (!result.ended()) {
+            return result;
+        }
+        result.results().stream()
+                .filter(LlmBatchItemResult::succeeded)
+                .forEach(item -> aiBudgetService.recordUsage(
+                        skeletonId, stage, vendor, model, item.inputTokens(), item.outputTokens()));
+        return result;
+    }
+
+    /** 항목 하나 기준으로 판정하면 상한이 사실상 항목 수만큼 뚫린다. */
+    private static int totalMaxTokens(List<LlmBatchItem> items) {
+        long total = items.stream().mapToLong(LlmBatchItem::maxTokens).sum();
+        return (int) Math.min(Integer.MAX_VALUE, total);
+    }
+
+    /**
+     * 제출 결과. 배치 ID 만으로는 나중에 조회할 수 없다 — 어느 벤더에 물어야 하는지가 함께 필요하다.
+     */
+    public record BatchSubmission(String batchId, AiVendor vendor, String model) {}
 
     /** 지금 임베딩 단계에 설정된 모델. 저장된 벡터가 현재 모델로 만들어진 것인지 판정하는 기준이다. */
     public String currentEmbeddingModel() {

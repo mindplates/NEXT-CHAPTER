@@ -35,6 +35,27 @@ final class StubAiServer implements AutoCloseable {
         return stub;
     }
 
+    /**
+     * 경로마다 다른 응답. 배치 조회는 <b>두 번 왕복한다</b> — 상태를 묻고, 결과 URL 에서 JSONL 을 받는다.
+     * 한 경로만 세우면 두 번째 왕복이 404 가 되어 어댑터가 아니라 스텁 때문에 실패한다.
+     */
+    static StubAiServer routing(Map<String, String> bodyByPath) throws IOException {
+        HttpServer httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        StubAiServer stub = new StubAiServer(httpServer);
+        bodyByPath.forEach(stub::route);
+        httpServer.start();
+        return stub;
+    }
+
+    /**
+     * 경로를 나중에 더한다. 배치 상태 응답의 {@code results_url} 이 <b>이 서버 자신의 주소</b>를 가리켜야
+     * 하는데, 그 주소는 서버를 띄운 뒤에야 안다(포트가 0으로 할당된다).
+     */
+    StubAiServer route(String path, String jsonBody) {
+        server.createContext(path, exchange -> handle(exchange, 200, jsonBody));
+        return this;
+    }
+
     private void handle(HttpExchange exchange, int status, String jsonBody) throws IOException {
         exchange.getRequestHeaders().forEach((name, values) -> receivedHeaders.put(name, String.join(",", values)));
         try (InputStream in = exchange.getRequestBody()) {

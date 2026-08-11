@@ -185,11 +185,18 @@ class AiGatewayTest {
     }
 
     private AiGateway gateway(List<LlmCompletionClientPort> completion, List<EmbeddingClientPort> embedding) {
+        return gateway(completion, embedding, List.of());
+    }
+
+    private AiGateway gateway(
+            List<LlmCompletionClientPort> completion,
+            List<EmbeddingClientPort> embedding,
+            List<com.mindplates.nextchapter.application.generation.port.out.LlmBatchClientPort> batch) {
         return new AiGateway(
                 loadAiStageSettingPort,
                 loadAiCredentialPort,
                 secretCipherPort,
-                new AiVendorRegistry(completion, embedding),
+                new AiVendorRegistry(completion, embedding, batch),
                 aiBudgetService);
     }
 

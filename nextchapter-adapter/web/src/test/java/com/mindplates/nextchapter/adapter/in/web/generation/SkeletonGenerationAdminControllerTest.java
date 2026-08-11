@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mindplates.nextchapter.adapter.in.web.support.GlobalExceptionHandler;
+import com.mindplates.nextchapter.application.generation.port.in.GetAiBatchJobUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GetGenerationProgressUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
@@ -33,6 +34,10 @@ class SkeletonGenerationAdminControllerTest {
 
     @MockitoBean
     GetGenerationProgressUseCase getGenerationProgressUseCase;
+
+    /** 컨트롤러가 배치 조회도 함께 노출한다 — 진행률만으로는 멈춘 것과 배치 대기가 구분되지 않는다. */
+    @MockitoBean
+    GetAiBatchJobUseCase getAiBatchJobUseCase;
 
     @Test
     @DisplayName("생성 시작은 진행 상태를 돌려준다")
@@ -80,6 +85,35 @@ class SkeletonGenerationAdminControllerTest {
         when(getGenerationProgressUseCase.bySkeletonId(999L)).thenThrow(new EntityNotFoundException("뼈대", 999L));
 
         mockMvc.perform(get("/api/admin/skeletons/999/progress")).andExpect(status().isNotFound());
+    }
+
+    /**
+     * 배치는 최대 24시간 아무 진행률 변화 없이 살아 있다. 이 목록이 없으면 운영자는 멈춘 것과 기다리는 것을
+     * 구분할 수 없다.
+     */
+    @Test
+    @DisplayName("배치 잡 목록을 내린다 — 진행률만으로는 대기와 정지가 구분되지 않는다")
+    void listsBatchJobs() throws Exception {
+        when(getAiBatchJobUseCase.bySkeletonId(5L))
+                .thenReturn(java.util.List.of(new com.mindplates.nextchapter.application.generation.view.AiBatchJobView(
+                        9L,
+                        5L,
+                        com.mindplates.nextchapter.domain.generation.model.GenerationStage.BODY,
+                        com.mindplates.nextchapter.domain.admin.model.AiVendor.ANTHROPIC,
+                        "claude-opus-5",
+                        "msgbatch_abc",
+                        com.mindplates.nextchapter.domain.generation.model.AiBatchStatus.SUBMITTED,
+                        12,
+                        null,
+                        null,
+                        java.time.LocalDateTime.of(2026, 8, 12, 9, 0))));
+
+        mockMvc.perform(get("/api/admin/skeletons/5/batches"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].batchId").value("msgbatch_abc"))
+                .andExpect(jsonPath("$.data[0].status").value("SUBMITTED"))
+                .andExpect(jsonPath("$.data[0].itemCount").value(12))
+                .andExpect(jsonPath("$.data[0].model").value("claude-opus-5"));
     }
 
     @Test

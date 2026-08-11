@@ -68,7 +68,7 @@ class AiSettingsServiceTest {
     @BeforeEach
     void setUp() {
         AiVendorRegistry registry = new AiVendorRegistry(
-                List.of(completionClient(AiVendor.ANTHROPIC)), List.of(embeddingClient(AiVendor.VOYAGE)));
+                List.of(completionClient(AiVendor.ANTHROPIC)), List.of(embeddingClient(AiVendor.VOYAGE)), List.of());
         service = new AiSettingsService(
                 loadAiStageSettingPort,
                 saveAiStageSettingPort,

@@ -6,6 +6,7 @@ import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerati
 import com.mindplates.nextchapter.application.generation.port.in.GetGenerationProgressUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.PublishReadySkeletonsUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase;
+import com.mindplates.nextchapter.application.generation.port.in.SubmitChapterBodyBatchUseCase;
 import com.mindplates.nextchapter.application.generation.port.out.GenerationEventPublisherPort;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
@@ -43,6 +44,7 @@ public class SkeletonGenerationService
     private final LoadChapterPort loadChapterPort;
     private final LoadOutboxEventPort loadOutboxEventPort;
     private final GenerationEventPublisherPort eventPublisher;
+    private final SubmitChapterBodyBatchUseCase submitChapterBodyBatchUseCase;
 
     /**
      * 뼈대가 이미 있으면 만들지 않는다. 같은 주제로 두 번 요청하는 것은 합류이지 재생성이 아니고,
@@ -88,6 +90,13 @@ public class SkeletonGenerationService
     /**
      * 챕터 수만큼 본문 생성을 발행한다. 파티션이 병렬도를 정하므로 여기서는 개수를 줄이지 않는다 —
      * 발행 측에서 조절하면 파티션 수를 늘려도 병렬도가 따라오지 않는다.
+     *
+     * <p><b>배치 경로가 여기서 갈린다.</b> 배치 제출이 성공하면 개별 메시지를 발행하지 않는다. 두 경로가
+     * 함께 돌면 같은 챕터의 본문을 두 번 생성해 비용이 배가 되고, 배치의 할인이 무의미해진다.
+     *
+     * <p>분기를 한 곳에 두는 이유는 "어느 경로로 갔는가"가 <b>한 판정</b>이어야 하기 때문이다. 배치 서비스가
+     * 스스로 개별 메시지를 발행하게 하면 두 서비스가 같은 결정을 각자 하게 되고, 둘이 어긋나면 발행이
+     * 중복되거나 아예 없다 — 후자는 뼈대가 본문 단계에 갇히는 조용한 실패다.
      */
     @Override
     public void outlinesCompleted(Long skeletonId) {
@@ -97,6 +106,10 @@ public class SkeletonGenerationService
             // 개요 단계가 챕터를 하나도 만들지 못한 상태로 본문 단계에 들어가면 완료 판정이 즉시
             // 참이 되어 빈 뼈대가 published 로 간다. 그건 부분 공개보다 나쁘다.
             failed(skeletonId, "개요 단계 이후 챕터가 없습니다.");
+            return;
+        }
+        if (submitChapterBodyBatchUseCase.submitBodies(skeletonId)) {
+            log.info("[생성] 본문 생성을 배치로 제출했다 skeletonId={} chapters={}", advanced.id(), chapters.size());
             return;
         }
         chapters.forEach(chapter -> eventPublisher.requestBody(skeletonId, chapter.id(), chapter.chapterKey()));

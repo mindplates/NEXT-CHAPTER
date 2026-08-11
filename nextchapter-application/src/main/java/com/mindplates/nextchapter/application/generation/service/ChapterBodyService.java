@@ -6,6 +6,7 @@ import com.mindplates.nextchapter.application.chapter.port.in.command.RecordChap
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterOutlinePort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterRelationPort;
+import com.mindplates.nextchapter.application.generation.port.in.ComposeChapterBodyUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateChapterBodyUseCase;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
@@ -21,6 +22,7 @@ import com.mindplates.nextchapter.domain.chapter.model.ProposedBlock;
 import com.mindplates.nextchapter.domain.skeleton.model.Skeleton;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -40,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ChapterBodyService implements GenerateChapterBodyUseCase {
+public class ChapterBodyService implements GenerateChapterBodyUseCase, ComposeChapterBodyUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ChapterBodyService.class);
 
@@ -64,11 +66,35 @@ public class ChapterBodyService implements GenerateChapterBodyUseCase {
      */
     @Override
     public boolean generate(Long skeletonId, Long chapterId) {
+        Optional<ChapterBodyPrompt> prompt = promptFor(skeletonId, chapterId);
+        if (prompt.isEmpty()) {
+            return false;
+        }
+        ChapterBodyPrompt composed = prompt.get();
+        apply(
+                chapterId,
+                aiGateway
+                        .complete(
+                                AiStage.SKELETON_BODY,
+                                skeletonId,
+                                composed.systemPrompt(),
+                                composed.userPrompt(),
+                                composed.maxTokens())
+                        .text());
+        return true;
+    }
+
+    /**
+     * 프롬프트 조립을 따로 노출한다 — 개별 호출과 배치가 <b>같은</b> 프롬프트를 써야 한다. 배치용을 따로
+     * 만들면 두 경로가 서로 다른 본문을 만들고, 그 차이는 집단 신호를 겹쳐 보는 전제를 무너뜨린다.
+     */
+    @Override
+    public Optional<ChapterBodyPrompt> promptFor(Long skeletonId, Long chapterId) {
         Chapter chapter =
                 loadChapterPort.findById(chapterId).orElseThrow(() -> new EntityNotFoundException("챕터", chapterId));
         if (chapter.hasBody()) {
             log.info("[본문] 이미 본문이 있어 건너뛴다 chapterId={} version={}", chapterId, chapter.currentVersion());
-            return false;
+            return Optional.empty();
         }
 
         ChapterOutline outline = loadChapterOutlinePort
@@ -82,28 +108,28 @@ public class ChapterBodyService implements GenerateChapterBodyUseCase {
                 .orElseThrow(() -> new EntityNotFoundException("주제", skeleton.topicId()));
 
         List<Chapter> siblings = loadChapterPort.findBySkeletonId(skeletonId);
-        List<ProposedBlock> blocks = ChapterBodyPrompts.parse(aiGateway
-                .complete(
-                        AiStage.SKELETON_BODY,
-                        skeletonId,
-                        ChapterBodyPrompts.SYSTEM_PROMPT,
-                        ChapterBodyPrompts.prompt(
-                                topic.name(),
-                                chapter.title(),
-                                chapter.summary(),
-                                outline.points(),
-                                prerequisiteTitles(skeletonId, chapterId, siblings),
-                                siblingTitles(chapterId, siblings)),
-                        MAX_TOKENS)
-                .text());
+        return Optional.of(new ChapterBodyPrompt(
+                ChapterBodyPrompts.SYSTEM_PROMPT,
+                ChapterBodyPrompts.prompt(
+                        topic.name(),
+                        chapter.title(),
+                        chapter.summary(),
+                        outline.points(),
+                        prerequisiteTitles(skeletonId, chapterId, siblings),
+                        siblingTitles(chapterId, siblings)),
+                MAX_TOKENS));
+    }
 
+    /** 파싱·출처 검사·기록이 한 곳이다. 두 곳에 복제하면 한쪽만 고치는 순간 조용히 어긋난다. */
+    @Override
+    public void apply(Long chapterId, String responseText) {
+        List<ProposedBlock> blocks = ChapterBodyPrompts.parse(responseText);
         requireSources(chapterId, blocks);
 
         recordChapterBodyUseCase.record(
                 chapterId,
                 new RecordChapterBodyCommand(blocks, ChapterVersionSource.GENERATED, null, "generation-pipeline"));
         log.info("[본문] 생성 완료 chapterId={} blocks={}", chapterId, blocks.size());
-        return true;
     }
 
     /**
