@@ -38,9 +38,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record GenerationTopicProperties(
         String prefix, int graphPartitions, int outlinePartitions, int bodyPartitions, short replicationFactor) {
 
-    private static final String GRAPH_REQUESTED = "skeleton.graph.requested";
-    private static final String OUTLINE_REQUESTED = "skeleton.outline.requested";
-    private static final String BODY_REQUESTED = "skeleton.body.requested";
+    /**
+     * 리스너 애노테이션이 같은 값을 써야 하므로 상수로 공개한다. 애노테이션에는 컴파일 상수만 넣을 수
+     * 있어서 문자열을 두 번 적게 되는데, 둘이 어긋나면 컨슈머가 아무 메시지도 받지 못하면서 에러도
+     * 나지 않는다 — 상수를 공유해 그 가능성을 없앤다.
+     */
+    public static final String GRAPH_REQUESTED = "skeleton.graph.requested";
+
+    public static final String OUTLINE_REQUESTED = "skeleton.outline.requested";
+
+    public static final String BODY_REQUESTED = "skeleton.body.requested";
 
     public GenerationTopicProperties {
         prefix = prefix == null ? "" : prefix.trim();

@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.ConfluentKafkaContainer;
@@ -46,7 +47,9 @@ import org.testcontainers.kafka.ConfluentKafkaContainer;
             "nextchapter.kafka.prefix=it-",
             "nextchapter.kafka.body-partitions=6",
             "spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer",
-            "spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer"
+            "spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer",
+            "spring.kafka.consumer.group-id=it-generation",
+            "spring.kafka.consumer.auto-offset-reset=earliest"
         })
 @DisplayName("생성 이벤트 발행 (실제 Kafka)")
 class GenerationEventKafkaPublisherIT {
@@ -68,6 +71,18 @@ class GenerationEventKafkaPublisherIT {
 
     @Autowired
     GenerationTopicProperties topics;
+
+    /**
+     * 리스너가 같은 모듈에 있어 컴포넌트 스캔에 걸린다. 유스케이스 구현은 application 모듈이라 이
+     * 테스트 컨텍스트에 없으므로 목으로 채운다 — 이 테스트가 검증하는 것은 발행이고, 컨슈머 동작은
+     * 각 단계의 테스트가 본다.
+     */
+    @MockitoBean
+    com.mindplates.nextchapter.application.generation.port.in.GenerateSkeletonGraphUseCase generateSkeletonGraphUseCase;
+
+    @MockitoBean
+    com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase
+            advanceGenerationStageUseCase;
 
     @Test
     @DisplayName("토픽이 선언한 파티션 수로 만들어진다")
