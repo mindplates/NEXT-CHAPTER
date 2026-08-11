@@ -234,7 +234,7 @@ public class TopicResolutionService implements ResolveTopicInputUseCase {
 
     private String ask(String prompt) {
         return aiGateway
-                .complete(AiStage.TOPIC_MAPPING, TopicMappingPrompts.SYSTEM_PROMPT, prompt, MAPPING_MAX_TOKENS)
+                .complete(AiStage.TOPIC_MAPPING, null, TopicMappingPrompts.SYSTEM_PROMPT, prompt, MAPPING_MAX_TOKENS)
                 .text();
     }
 

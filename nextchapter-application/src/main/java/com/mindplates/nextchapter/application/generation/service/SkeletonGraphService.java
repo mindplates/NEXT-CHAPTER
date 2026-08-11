@@ -76,6 +76,7 @@ public class SkeletonGraphService implements GenerateSkeletonGraphUseCase {
         ProposedChapterGraph graph = SkeletonGraphPrompts.parse(aiGateway
                 .complete(
                         AiStage.SKELETON_BODY,
+                        skeletonId,
                         SkeletonGraphPrompts.SYSTEM_PROMPT,
                         SkeletonGraphPrompts.prompt(topic.name(), topic.description(), field.name(), domain.name()),
                         MAX_TOKENS)

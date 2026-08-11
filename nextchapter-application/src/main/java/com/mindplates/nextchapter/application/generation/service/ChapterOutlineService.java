@@ -71,6 +71,7 @@ public class ChapterOutlineService implements GenerateChapterOutlinesUseCase {
         ProposedOutlineSet proposed = ChapterOutlinePrompts.parse(aiGateway
                 .complete(
                         AiStage.SKELETON_BODY,
+                        skeletonId,
                         ChapterOutlinePrompts.SYSTEM_PROMPT,
                         ChapterOutlinePrompts.prompt(
                                 topic.name(), chapters, loadChapterRelationPort.findBySkeletonId(skeletonId)),

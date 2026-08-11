@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.adapter.out.messaging.generation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateSkeletonGraphUseCase;
+import com.mindplates.nextchapter.common.exception.BudgetExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -38,8 +39,12 @@ public class SkeletonGraphListener {
     public void onGraphRequested(String payload) throws Exception {
         GenerationEvents.GraphRequested event = objectMapper.readValue(payload, GenerationEvents.GraphRequested.class);
 
-        int chapters = generateSkeletonGraphUseCase.generate(event.skeletonId());
-        log.info("[그래프] skeletonId={} 챕터 {}개 생성", event.skeletonId(), chapters);
-        advanceGenerationStageUseCase.graphCompleted(event.skeletonId());
+        try {
+            int chapters = generateSkeletonGraphUseCase.generate(event.skeletonId());
+            log.info("[그래프] skeletonId={} 챕터 {}개 생성", event.skeletonId(), chapters);
+            advanceGenerationStageUseCase.graphCompleted(event.skeletonId());
+        } catch (BudgetExceededException exception) {
+            BudgetStopReporter.report(advanceGenerationStageUseCase, event.skeletonId(), exception);
+        }
     }
 }

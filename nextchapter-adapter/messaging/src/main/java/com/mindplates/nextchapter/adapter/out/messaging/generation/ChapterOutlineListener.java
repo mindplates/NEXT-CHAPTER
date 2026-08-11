@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.adapter.out.messaging.generation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateChapterOutlinesUseCase;
+import com.mindplates.nextchapter.common.exception.BudgetExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -36,8 +37,12 @@ public class ChapterOutlineListener {
         GenerationEvents.OutlinesRequested event =
                 objectMapper.readValue(payload, GenerationEvents.OutlinesRequested.class);
 
-        int outlines = generateChapterOutlinesUseCase.generate(event.skeletonId());
-        log.info("[개요] skeletonId={} 챕터 {}개 개요 생성", event.skeletonId(), outlines);
-        advanceGenerationStageUseCase.outlinesCompleted(event.skeletonId());
+        try {
+            int outlines = generateChapterOutlinesUseCase.generate(event.skeletonId());
+            log.info("[개요] skeletonId={} 챕터 {}개 개요 생성", event.skeletonId(), outlines);
+            advanceGenerationStageUseCase.outlinesCompleted(event.skeletonId());
+        } catch (BudgetExceededException exception) {
+            BudgetStopReporter.report(advanceGenerationStageUseCase, event.skeletonId(), exception);
+        }
     }
 }

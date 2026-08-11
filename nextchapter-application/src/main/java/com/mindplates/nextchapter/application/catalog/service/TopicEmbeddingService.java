@@ -57,7 +57,7 @@ public class TopicEmbeddingService implements EmbedTopicUseCase, SearchSimilarTo
         CatalogTopic topic =
                 loadCatalogTopicPort.findById(topicId).orElseThrow(() -> new EntityNotFoundException("주제", topicId));
         String sourceText = TopicEmbedding.sourceTextOf(topic, loadTopicAliasPort.findByTopicId(topicId));
-        var result = aiGateway.embed(List.of(sourceText));
+        var result = aiGateway.embed(null, List.of(sourceText));
 
         return saveTopicEmbeddingPort.save(TopicEmbedding.of(topicId, result.model(), sourceText, result.first()));
     }
@@ -67,7 +67,7 @@ public class TopicEmbeddingService implements EmbedTopicUseCase, SearchSimilarTo
     public List<TopicSimilarityView> search(String freeText, int limit) {
         String text = Strings.requireText(freeText, "검색어");
         String model = aiGateway.currentEmbeddingModel();
-        var result = aiGateway.embed(List.of(text));
+        var result = aiGateway.embed(null, List.of(text));
 
         return loadTopicEmbeddingPort.searchSimilar(
                 result.first(), model, limit <= 0 ? DEFAULT_SEARCH_LIMIT : limit, MIN_SIMILARITY);

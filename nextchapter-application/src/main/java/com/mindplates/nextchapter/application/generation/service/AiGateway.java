@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.application.generation.service;
 import com.mindplates.nextchapter.application.admin.port.out.LoadAiCredentialPort;
 import com.mindplates.nextchapter.application.admin.port.out.LoadAiStageSettingPort;
 import com.mindplates.nextchapter.application.admin.port.out.SecretCipherPort;
+import com.mindplates.nextchapter.application.admin.service.AiBudgetService;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingClientPort;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingRequest;
 import com.mindplates.nextchapter.application.generation.port.out.EmbeddingResult;
@@ -34,6 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>키를 매 호출 복호화하는 것은 의도된 비용이다. 캐시하면 관리 화면에서 키를 교체해도 재기동
  * 전까지 옛 키가 쓰인다.
+ *
+ * <p><b>예산 상한도 여기서 걸린다.</b> 모든 AI 호출이 이 창구를 지나므로 검사를 한 곳에만 두면 되고,
+ * 호출부가 늘어도 상한이 새지 않는다. 호출부마다 검사하면 새 경로를 추가할 때 잊는 쪽이 기본값이 된다.
  */
 @Service
 @RequiredArgsConstructor
@@ -46,8 +50,14 @@ public class AiGateway {
     private final LoadAiCredentialPort loadAiCredentialPort;
     private final SecretCipherPort secretCipherPort;
     private final AiVendorRegistry registry;
+    private final AiBudgetService aiBudgetService;
 
-    public LlmCompletionResult complete(AiStage stage, String systemPrompt, String userPrompt, int maxTokens) {
+    /**
+     * @param skeletonId 비용을 귀속시킬 뼈대. null 이면 뼈대당 상한을 적용하지 않는다 — 주제 매핑처럼 어느
+     *     뼈대의 책임도 아닌 호출이다. 일일 상한에는 그래도 포함된다
+     */
+    public LlmCompletionResult complete(
+            AiStage stage, Long skeletonId, String systemPrompt, String userPrompt, int maxTokens) {
         if (stage.isEmbedding()) {
             throw new InvalidOperationException("임베딩 단계는 완성 호출에 쓸 수 없습니다.");
         }
@@ -55,8 +65,12 @@ public class AiGateway {
         LlmCompletionClientPort client = registry.completionClient(setting.vendor())
                 .orElseThrow(() -> unsupported(stage, setting.vendor(), "완성"));
 
+        aiBudgetService.requireWithinBudget(skeletonId, maxTokens);
         LlmCompletionResult result = client.complete(new LlmCompletionRequest(
                 setting.model(), decryptedKey(setting.vendor()), systemPrompt, userPrompt, maxTokens, null));
+        aiBudgetService.recordUsage(
+                skeletonId, stage, setting.vendor(), setting.model(), result.inputTokens(), result.outputTokens());
+
         log.debug(
                 "[AI] stage={} vendor={} model={} tokens={}",
                 stage,
@@ -66,12 +80,32 @@ public class AiGateway {
         return result;
     }
 
-    public EmbeddingResult embed(List<String> inputs) {
+    /**
+     * 임베딩은 {@code maxTokens} 개념이 없어 입력 길이로 어림한다.
+     *
+     * <p>토큰당 문자 수는 언어와 모델마다 다르지만, 여기서 필요한 것은 정확한 값이 아니라 <b>상한 판정을
+     * 위한 보수적 어림</b>이다. 실제 소비량은 응답에서 받아 기록하므로 누적치는 정확하다.
+     */
+    public EmbeddingResult embed(Long skeletonId, List<String> inputs) {
         AiStageSetting setting = requireSetting(AiStage.EMBEDDING);
         EmbeddingClientPort client = registry.embeddingClient(setting.vendor())
                 .orElseThrow(() -> unsupported(AiStage.EMBEDDING, setting.vendor(), "임베딩"));
 
-        return client.embed(new EmbeddingRequest(setting.model(), decryptedKey(setting.vendor()), inputs));
+        aiBudgetService.requireWithinBudget(skeletonId, estimatedEmbeddingTokens(inputs));
+        EmbeddingResult result =
+                client.embed(new EmbeddingRequest(setting.model(), decryptedKey(setting.vendor()), inputs));
+        aiBudgetService.recordUsage(
+                skeletonId, AiStage.EMBEDDING, setting.vendor(), setting.model(), result.inputTokens(), 0);
+        return result;
+    }
+
+    /** 문자 수를 4로 나눈 값에 여유를 둔다. 과하게 잡는 쪽이 예산을 넘기는 쪽보다 낫다. */
+    private static int estimatedEmbeddingTokens(List<String> inputs) {
+        int characters = inputs.stream()
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(String::length)
+                .sum();
+        return Math.max(1, characters / 4 + 1);
     }
 
     /** 지금 임베딩 단계에 설정된 모델. 저장된 벡터가 현재 모델로 만들어진 것인지 판정하는 기준이다. */

@@ -132,7 +132,7 @@ class ChapterBodyServiceTest {
         assertThat(service.generate(SKELETON_ID, CHAPTER_ID)).isFalse();
 
         verify(recordChapterBodyUseCase, never()).record(any(), any());
-        verify(aiGateway, never()).complete(any(), anyString(), anyString(), anyInt());
+        verify(aiGateway, never()).complete(any(), any(), anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -143,7 +143,7 @@ class ChapterBodyServiceTest {
         assertThatThrownBy(() -> service.generate(SKELETON_ID, CHAPTER_ID))
                 .isInstanceOf(InvalidOperationException.class)
                 .hasMessageContaining("개요가 없어");
-        verify(aiGateway, never()).complete(any(), anyString(), anyString(), anyInt());
+        verify(aiGateway, never()).complete(any(), any(), anyString(), anyString(), anyInt());
     }
 
     /** 출처가 없으면 검증 패스가 검사할 대상이 없고, 그 상태는 "검증 통과"와 구분되지 않는다. */
@@ -214,7 +214,7 @@ class ChapterBodyServiceTest {
 
         ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> user = ArgumentCaptor.forClass(String.class);
-        verify(aiGateway).complete(any(), system.capture(), user.capture(), anyInt());
+        verify(aiGateway).complete(any(), any(), system.capture(), user.capture(), anyInt());
         assertThat(user.getValue())
                 .contains("경사의 의미")
                 .contains("제목-loss-function")
@@ -238,7 +238,7 @@ class ChapterBodyServiceTest {
     }
 
     private void stubResponse(String text) {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt()))
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
                 .thenReturn(new LlmCompletionResult(text, 1200, 3500));
     }
 

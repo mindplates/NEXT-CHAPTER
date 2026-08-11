@@ -213,7 +213,7 @@ class ChapterOutlineServiceTest {
         when(loadChapterPort.findBySkeletonId(SKELETON_ID)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.generate(SKELETON_ID)).isInstanceOf(InvalidOperationException.class);
-        verify(aiGateway, never()).complete(any(), anyString(), anyString(), anyInt());
+        verify(aiGateway, never()).complete(any(), any(), anyString(), anyString(), anyInt());
     }
 
     /** 겹침을 만들지 말라고만 하면 모델은 겹침을 숨긴다. 보고 항목이 응답 형식에 있어야 드러난다. */
@@ -226,7 +226,7 @@ class ChapterOutlineServiceTest {
 
         ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> user = ArgumentCaptor.forClass(String.class);
-        verify(aiGateway).complete(any(), system.capture(), user.capture(), anyInt());
+        verify(aiGateway).complete(any(), any(), system.capture(), user.capture(), anyInt());
         assertThat(system.getValue()).contains("findings 에 보고하라").contains("본문을 쓰지 말고");
         assertThat(user.getValue())
                 .contains("loss-function → gradient-descent (prerequisite)")
@@ -234,7 +234,7 @@ class ChapterOutlineServiceTest {
     }
 
     private void stubResponse(String text) {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt()))
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
                 .thenReturn(new LlmCompletionResult(text, 800, 2500));
     }
 

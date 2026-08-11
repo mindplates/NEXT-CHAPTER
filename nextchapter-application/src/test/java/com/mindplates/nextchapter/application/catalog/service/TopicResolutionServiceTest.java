@@ -202,7 +202,8 @@ class TopicResolutionServiceTest {
     @Test
     @DisplayName("도메인부터 못 좁히면 신규 생성이 불가하다 — 신규 도메인·분야는 자동으로 만들지 않는다")
     void cannotCreateWhenNoFieldChosen() {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt())).thenReturn(completion("{\"slug\": null}"));
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
+                .thenReturn(completion("{\"slug\": null}"));
         when(searchSimilarTopicsUseCase.search(anyString(), anyInt())).thenReturn(List.of(similarity()));
 
         TopicResolutionView view = service.resolve("바이올린 배우기", "user-1");
@@ -214,7 +215,8 @@ class TopicResolutionServiceTest {
     @Test
     @DisplayName("후보도 없고 붙일 자리도 없으면 바로 검토로 간다 — 사용자가 할 수 있는 일이 없다")
     void escalatesWhenNothingToOffer() {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt())).thenReturn(completion("{\"slug\": null}"));
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
+                .thenReturn(completion("{\"slug\": null}"));
         when(searchSimilarTopicsUseCase.search(anyString(), anyInt())).thenReturn(List.of());
 
         TopicResolutionView view = service.resolve("바이올린 배우기", "user-1");
@@ -226,7 +228,7 @@ class TopicResolutionServiceTest {
     @Test
     @DisplayName("LLM 이 죽어도 요청이 실패하지 않는다 — 후보 제시 경로로 흘러간다")
     void llmFailureDoesNotFailRequest() {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt()))
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
                 .thenThrow(new ExternalApiException("벤더 오류"));
         when(searchSimilarTopicsUseCase.search(anyString(), anyInt())).thenReturn(List.of(similarity()));
 
@@ -324,16 +326,17 @@ class TopicResolutionServiceTest {
         String topicResponse = topicSlug == null
                 ? "{\"slug\": null, \"proposedName\": \"강화학습\", \"proposedSlug\": \"reinforcement-learning\"}"
                 : "{\"slug\": \"" + topicSlug + "\"}";
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt())).thenAnswer(invocation -> {
-            String prompt = invocation.getArgument(2);
-            if (prompt.contains("아래 도메인 중")) {
-                return completion("{\"slug\": \"" + domainSlug + "\"}");
-            }
-            if (prompt.contains("아래 분야 중")) {
-                return completion("{\"slug\": \"" + fieldSlug + "\"}");
-            }
-            return completion(topicResponse);
-        });
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
+                .thenAnswer(invocation -> {
+                    String prompt = invocation.getArgument(3);
+                    if (prompt.contains("아래 도메인 중")) {
+                        return completion("{\"slug\": \"" + domainSlug + "\"}");
+                    }
+                    if (prompt.contains("아래 분야 중")) {
+                        return completion("{\"slug\": \"" + fieldSlug + "\"}");
+                    }
+                    return completion(topicResponse);
+                });
     }
 
     private static LlmCompletionResult completion(String text) {

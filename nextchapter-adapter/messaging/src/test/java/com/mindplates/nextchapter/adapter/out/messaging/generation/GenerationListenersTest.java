@@ -1,6 +1,8 @@
 package com.mindplates.nextchapter.adapter.out.messaging.generation;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -8,6 +10,7 @@ import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerati
 import com.mindplates.nextchapter.application.generation.port.in.GenerateChapterBodyUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateChapterOutlinesUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateSkeletonGraphUseCase;
+import com.mindplates.nextchapter.common.exception.BudgetExceededException;
 import com.mindplates.nextchapter.common.exception.ExternalApiException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -106,5 +109,47 @@ class GenerationListenersTest {
                 .isInstanceOf(ExternalApiException.class);
 
         verify(advanceGenerationStageUseCase, org.mockito.Mockito.never()).chapterBodyCompleted(5L);
+    }
+
+    /**
+     * 예산 초과만 예외적으로 삼킨다. 상한은 운영자가 올려 주기 전까지 그대로이므로 재시도가 같은 결과를
+     * 반복하고, 그동안 파티션이 막혀 다른 뼈대의 생성까지 밀린다.
+     *
+     * <p>삼키는 대가로 실패를 반드시 기록한다 — 기록 없이 삼키면 뼈대가 생성 중 상태에 영원히 남는다.
+     */
+    @Test
+    @DisplayName("예산 초과는 재시도하지 않고 실패로 확정한다")
+    void budgetExceededIsNotRetried() throws Exception {
+        when(generateChapterBodyUseCase.generate(5L, 101L)).thenThrow(new BudgetExceededException("일일 토큰 상한"));
+
+        new ChapterBodyListener(generateChapterBodyUseCase, advanceGenerationStageUseCase)
+                .onBodyRequested("{\"skeletonId\":5,\"chapterId\":101,\"chapterKey\":\"gradient-descent\"}");
+
+        verify(advanceGenerationStageUseCase).failed(eq(5L), contains("예산 상한 초과"));
+        verify(advanceGenerationStageUseCase, org.mockito.Mockito.never()).chapterBodyCompleted(5L);
+    }
+
+    @Test
+    @DisplayName("그래프 단계의 예산 초과도 같은 경로를 지난다")
+    void budgetExceededOnGraphStage() throws Exception {
+        when(generateSkeletonGraphUseCase.generate(5L)).thenThrow(new BudgetExceededException("뼈대당 토큰 상한"));
+
+        new SkeletonGraphListener(generateSkeletonGraphUseCase, advanceGenerationStageUseCase)
+                .onGraphRequested("{\"skeletonId\":5,\"topicId\":42}");
+
+        verify(advanceGenerationStageUseCase).failed(eq(5L), contains("예산 상한 초과"));
+        verify(advanceGenerationStageUseCase, org.mockito.Mockito.never()).graphCompleted(5L);
+    }
+
+    @Test
+    @DisplayName("개요 단계의 예산 초과도 같은 경로를 지난다")
+    void budgetExceededOnOutlineStage() throws Exception {
+        when(generateChapterOutlinesUseCase.generate(5L)).thenThrow(new BudgetExceededException("일일 토큰 상한"));
+
+        new ChapterOutlineListener(generateChapterOutlinesUseCase, advanceGenerationStageUseCase)
+                .onOutlinesRequested("{\"skeletonId\":5}");
+
+        verify(advanceGenerationStageUseCase).failed(eq(5L), contains("예산 상한 초과"));
+        verify(advanceGenerationStageUseCase, org.mockito.Mockito.never()).outlinesCompleted(5L);
     }
 }

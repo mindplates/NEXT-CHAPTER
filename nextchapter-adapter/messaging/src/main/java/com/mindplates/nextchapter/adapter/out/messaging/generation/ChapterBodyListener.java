@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.adapter.out.messaging.generation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateChapterBodyUseCase;
+import com.mindplates.nextchapter.common.exception.BudgetExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -39,8 +40,12 @@ public class ChapterBodyListener {
     public void onBodyRequested(String payload) throws Exception {
         GenerationEvents.BodyRequested event = objectMapper.readValue(payload, GenerationEvents.BodyRequested.class);
 
-        boolean created = generateChapterBodyUseCase.generate(event.skeletonId(), event.chapterId());
-        log.info("[본문] chapterKey={} {}", event.chapterKey(), created ? "생성" : "건너뜀(이미 있음)");
-        advanceGenerationStageUseCase.chapterBodyCompleted(event.skeletonId());
+        try {
+            boolean created = generateChapterBodyUseCase.generate(event.skeletonId(), event.chapterId());
+            log.info("[본문] chapterKey={} {}", event.chapterKey(), created ? "생성" : "건너뜀(이미 있음)");
+            advanceGenerationStageUseCase.chapterBodyCompleted(event.skeletonId());
+        } catch (BudgetExceededException exception) {
+            BudgetStopReporter.report(advanceGenerationStageUseCase, event.skeletonId(), exception);
+        }
     }
 }

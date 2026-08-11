@@ -266,13 +266,13 @@ class SkeletonGraphServiceTest {
 
         ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> user = ArgumentCaptor.forClass(String.class);
-        verify(aiGateway).complete(any(), system.capture(), user.capture(), anyInt());
+        verify(aiGateway).complete(any(), any(), system.capture(), user.capture(), anyInt());
         assertThat(system.getValue()).contains("선형 목차를 만들지 마라").contains("순환");
         assertThat(user.getValue()).contains("머신러닝").contains("컴퓨터과학").contains("인공지능");
     }
 
     private void stubResponse(String text) {
-        when(aiGateway.complete(any(), anyString(), anyString(), anyInt()))
+        when(aiGateway.complete(any(), any(), anyString(), anyString(), anyInt()))
                 .thenReturn(new LlmCompletionResult(text, 500, 1500));
     }
 }

@@ -85,6 +85,7 @@ public class ChapterBodyService implements GenerateChapterBodyUseCase {
         List<ProposedBlock> blocks = ChapterBodyPrompts.parse(aiGateway
                 .complete(
                         AiStage.SKELETON_BODY,
+                        skeletonId,
                         ChapterBodyPrompts.SYSTEM_PROMPT,
                         ChapterBodyPrompts.prompt(
                                 topic.name(),

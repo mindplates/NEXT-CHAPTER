@@ -64,13 +64,13 @@ class TopicEmbeddingServiceTest {
         when(loadCatalogTopicPort.findById(1L)).thenReturn(Optional.of(topic()));
         when(loadTopicAliasPort.findByTopicId(1L))
                 .thenReturn(List.of(TopicAlias.create(1L, "기계학습"), TopicAlias.create(1L, "ML 입문")));
-        when(aiGateway.embed(any())).thenReturn(embeddingResult());
+        when(aiGateway.embed(any(), any())).thenReturn(embeddingResult());
         when(saveTopicEmbeddingPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.embed(1L);
 
         ArgumentCaptor<List<String>> inputs = ArgumentCaptor.forClass(List.class);
-        verify(aiGateway).embed(inputs.capture());
+        verify(aiGateway).embed(any(), inputs.capture());
         assertThat(inputs.getValue()).singleElement().satisfies(text -> assertThat(text)
                 .contains("머신러닝")
                 .contains("기계학습")
@@ -83,7 +83,7 @@ class TopicEmbeddingServiceTest {
     void storesModelFromResult() {
         when(loadCatalogTopicPort.findById(1L)).thenReturn(Optional.of(topic()));
         when(loadTopicAliasPort.findByTopicId(1L)).thenReturn(List.of());
-        when(aiGateway.embed(any())).thenReturn(embeddingResult());
+        when(aiGateway.embed(any(), any())).thenReturn(embeddingResult());
         when(saveTopicEmbeddingPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         TopicEmbedding saved = service.embed(1L);
@@ -96,7 +96,7 @@ class TopicEmbeddingServiceTest {
     @DisplayName("검색은 현재 모델로 걸러 조회한다")
     void searchFiltersByCurrentModel() {
         when(aiGateway.currentEmbeddingModel()).thenReturn(MODEL);
-        when(aiGateway.embed(any())).thenReturn(embeddingResult());
+        when(aiGateway.embed(any(), any())).thenReturn(embeddingResult());
         when(loadTopicEmbeddingPort.searchSimilar(any(), anyString(), anyInt(), anyDouble()))
                 .thenReturn(List.of());
 
@@ -109,7 +109,7 @@ class TopicEmbeddingServiceTest {
     @DisplayName("limit 이 0 이하면 기본값을 쓴다")
     void searchFallsBackToDefaultLimit() {
         when(aiGateway.currentEmbeddingModel()).thenReturn(MODEL);
-        when(aiGateway.embed(any())).thenReturn(embeddingResult());
+        when(aiGateway.embed(any(), any())).thenReturn(embeddingResult());
         when(loadTopicEmbeddingPort.searchSimilar(any(), anyString(), anyInt(), anyDouble()))
                 .thenReturn(List.of());
 
@@ -125,7 +125,7 @@ class TopicEmbeddingServiceTest {
         when(loadTopicEmbeddingPort.findTopicIdsNotEmbeddedWith(MODEL, 3)).thenReturn(List.of(1L, 2L, 3L));
         when(loadCatalogTopicPort.findById(any())).thenReturn(Optional.of(topic()));
         when(loadTopicAliasPort.findByTopicId(any())).thenReturn(List.of());
-        when(aiGateway.embed(any()))
+        when(aiGateway.embed(any(), any()))
                 .thenReturn(embeddingResult())
                 .thenThrow(new ExternalApiException("벤더 오류"))
                 .thenReturn(embeddingResult());
