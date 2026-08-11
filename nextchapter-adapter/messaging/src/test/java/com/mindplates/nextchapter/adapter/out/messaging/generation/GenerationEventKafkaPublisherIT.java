@@ -99,6 +99,11 @@ class GenerationEventKafkaPublisherIT {
     com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase
             advanceGenerationStageUseCase;
 
+    /** 재시도 소진 복구기도 같은 모듈에 있다. 큐 기록은 application 모듈이라 목으로 채운다. */
+    @MockitoBean
+    com.mindplates.nextchapter.application.generation.port.in.RecordGenerationFailureUseCase
+            recordGenerationFailureUseCase;
+
     /** outbox 리스너도 같은 모듈에 있다. 반영 대상(Neo4j)은 graph 모듈이라 목으로 채운다. */
     @MockitoBean
     com.mindplates.nextchapter.application.chapter.port.out.GraphSyncPort graphSyncPort;

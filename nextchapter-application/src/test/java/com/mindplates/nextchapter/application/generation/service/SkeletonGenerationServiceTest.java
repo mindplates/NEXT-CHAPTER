@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
+import com.mindplates.nextchapter.application.chapter.port.out.LoadOutboxEventPort;
 import com.mindplates.nextchapter.application.generation.port.out.GenerationEventPublisherPort;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
@@ -48,6 +49,9 @@ class SkeletonGenerationServiceTest {
 
     @Mock
     LoadChapterPort loadChapterPort;
+
+    @Mock
+    LoadOutboxEventPort loadOutboxEventPort;
 
     @Mock
     GenerationEventPublisherPort eventPublisher;
@@ -230,6 +234,60 @@ class SkeletonGenerationServiceTest {
 
         assertThatThrownBy(() -> service.bySkeletonId(SKELETON_ID)).isInstanceOf(EntityNotFoundException.class);
         assertThatThrownBy(() -> service.byTopicId(TOPIC_ID)).isInstanceOf(EntityNotFoundException.class);
+    }
+
+    /**
+     * 공개 조건에 outbox 가 비었는지가 들어간다. 없으면 Neo4j 에 아직 반영되지 않은 뼈대가 공개되고,
+     * 그 상태의 그래프 탐색은 <b>에러가 아니라</b> "관련 챕터 없음"으로 나타난다 — 사용자에게는 빈 화면이고
+     * 로그에도 아무것도 남지 않는다.
+     */
+    @Test
+    @DisplayName("미발행 outbox 가 남아 있으면 공개하지 않는다")
+    void doesNotPublishWhileOutboxPending() {
+        when(loadSkeletonPort.findByStatus(SkeletonStatus.GENERATING_ASSETS))
+                .thenReturn(List.of(skeleton(SkeletonStatus.GENERATING_ASSETS)));
+        when(loadChapterPort.countBySkeletonIdWithoutBody(SKELETON_ID)).thenReturn(0L);
+        when(loadOutboxEventPort.countPendingBySkeletonId(SKELETON_ID)).thenReturn(2L);
+
+        assertThat(service.publishReady()).isZero();
+        verify(saveSkeletonPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("본문 없는 챕터가 남아 있으면 공개하지 않는다")
+    void doesNotPublishWithMissingBodies() {
+        when(loadSkeletonPort.findByStatus(SkeletonStatus.GENERATING_ASSETS))
+                .thenReturn(List.of(skeleton(SkeletonStatus.GENERATING_ASSETS)));
+        when(loadChapterPort.countBySkeletonIdWithoutBody(SKELETON_ID)).thenReturn(1L);
+
+        assertThat(service.publishReady()).isZero();
+        verify(loadOutboxEventPort, never()).countPendingBySkeletonId(anyLong());
+        verify(saveSkeletonPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("전 챕터 본문 + outbox 비었으면 공개한다")
+    void publishesWhenEverythingSettled() {
+        when(loadSkeletonPort.findByStatus(SkeletonStatus.GENERATING_ASSETS))
+                .thenReturn(List.of(skeleton(SkeletonStatus.GENERATING_ASSETS)));
+        when(loadChapterPort.countBySkeletonIdWithoutBody(SKELETON_ID)).thenReturn(0L);
+        when(loadOutboxEventPort.countPendingBySkeletonId(SKELETON_ID)).thenReturn(0L);
+
+        assertThat(service.publishReady()).isEqualTo(1);
+
+        ArgumentCaptor<Skeleton> saved = ArgumentCaptor.forClass(Skeleton.class);
+        verify(saveSkeletonPort).save(saved.capture());
+        assertThat(saved.getValue().status()).isEqualTo(SkeletonStatus.PUBLISHED);
+    }
+
+    /** 자산 단계가 아닌 뼈대는 애초에 후보가 아니다 — 스윕이 상태로 걸러 온다. */
+    @Test
+    @DisplayName("자산 단계 뼈대만 훑는다")
+    void sweepsOnlyAssetStage() {
+        when(loadSkeletonPort.findByStatus(SkeletonStatus.GENERATING_ASSETS)).thenReturn(List.of());
+
+        assertThat(service.publishReady()).isZero();
+        verifyNoInteractions(loadOutboxEventPort);
     }
 
     private void stub(SkeletonStatus status) {

@@ -1,8 +1,10 @@
 package com.mindplates.nextchapter.application.generation.service;
 
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
+import com.mindplates.nextchapter.application.chapter.port.out.LoadOutboxEventPort;
 import com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.GetGenerationProgressUseCase;
+import com.mindplates.nextchapter.application.generation.port.in.PublishReadySkeletonsUseCase;
 import com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase;
 import com.mindplates.nextchapter.application.generation.port.out.GenerationEventPublisherPort;
 import com.mindplates.nextchapter.application.generation.view.GenerationProgressView;
@@ -29,13 +31,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class SkeletonGenerationService
-        implements StartSkeletonGenerationUseCase, GetGenerationProgressUseCase, AdvanceGenerationStageUseCase {
+        implements StartSkeletonGenerationUseCase,
+                GetGenerationProgressUseCase,
+                AdvanceGenerationStageUseCase,
+                PublishReadySkeletonsUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(SkeletonGenerationService.class);
 
     private final LoadSkeletonPort loadSkeletonPort;
     private final SaveSkeletonPort saveSkeletonPort;
     private final LoadChapterPort loadChapterPort;
+    private final LoadOutboxEventPort loadOutboxEventPort;
     private final GenerationEventPublisherPort eventPublisher;
 
     /**
@@ -120,6 +126,52 @@ public class SkeletonGenerationService
         }
         saveSkeletonPort.save(skeleton.transitionTo(SkeletonStatus.GENERATING_ASSETS));
         log.info("[생성] 전 챕터 본문 완료 → 파생 자산 단계 skeletonId={}", skeletonId);
+    }
+
+    /**
+     * 공개 조건을 만족한 뼈대를 넘긴다.
+     *
+     * <p>조건은 셋이고, <b>세 번째가 이 스윕의 존재 이유다.</b>
+     *
+     * <ol>
+     *   <li>{@code GENERATING_ASSETS} 단계다 — 전 챕터 본문이 이미 끝났다는 뜻이다
+     *   <li>본문 없는 챕터가 0개다 — 되돌아온 재시도로 챕터가 늘어났을 수 있으므로 다시 확인한다
+     *   <li><b>이 뼈대의 미발행 outbox 이벤트가 0개다</b>
+     * </ol>
+     *
+     * <p>세 번째가 없으면 Neo4j에 아직 반영되지 않은 뼈대가 공개된다. 그 상태에서 그래프 탐색은 노드를
+     * 찾지 못하는데 <b>에러가 아니라 "관련 챕터 없음"</b>으로 나타난다 — 사용자에게는 그냥 빈 화면이고,
+     * 로그에도 아무것도 남지 않는다.
+     *
+     * <p>활성 형태가 {@code web} 하나뿐이라 자산 완료 판정은 아직 없다. 웹 자산(도표·수식)은 블록 문서
+     * 안에 있으므로 본문 완료가 곧 웹 형태 완료다. 영상·PPT가 붙는 M6에서 이 목록에 조건이 하나 늘어난다.
+     */
+    @Override
+    public int publishReady() {
+        List<Skeleton> candidates = loadSkeletonPort.findByStatus(SkeletonStatus.GENERATING_ASSETS);
+        int published = 0;
+        for (Skeleton skeleton : candidates) {
+            if (publishIfReady(skeleton)) {
+                published++;
+            }
+        }
+        return published;
+    }
+
+    private boolean publishIfReady(Skeleton skeleton) {
+        long withoutBody = loadChapterPort.countBySkeletonIdWithoutBody(skeleton.id());
+        if (withoutBody > 0) {
+            log.debug("[생성] 공개 보류 — 본문 없는 챕터 {}개 skeletonId={}", withoutBody, skeleton.id());
+            return false;
+        }
+        long pendingEvents = loadOutboxEventPort.countPendingBySkeletonId(skeleton.id());
+        if (pendingEvents > 0) {
+            log.debug("[생성] 공개 보류 — 미발행 outbox {}건 skeletonId={}", pendingEvents, skeleton.id());
+            return false;
+        }
+        saveSkeletonPort.save(skeleton.transitionTo(SkeletonStatus.PUBLISHED));
+        log.info("[생성] 공개 skeletonId={} topicId={}", skeleton.id(), skeleton.topicId());
+        return true;
     }
 
     @Override

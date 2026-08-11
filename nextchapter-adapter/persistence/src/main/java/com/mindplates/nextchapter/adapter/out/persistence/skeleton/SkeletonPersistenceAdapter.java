@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.adapter.out.persistence.skeleton;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.application.skeleton.port.out.SaveSkeletonPort;
 import com.mindplates.nextchapter.domain.skeleton.model.Skeleton;
+import com.mindplates.nextchapter.domain.skeleton.model.SkeletonStatus;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,14 @@ public class SkeletonPersistenceAdapter implements LoadSkeletonPort, SaveSkeleto
     @Transactional(readOnly = true)
     public List<Long> findTopicIdsWithSkeleton() {
         return skeletonRepository.findAllTopicIds();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Skeleton> findByStatus(SkeletonStatus status) {
+        return skeletonRepository.findByStatusOrderByIdAsc(status).stream()
+                .map(SkeletonPersistenceAdapter::toDomain)
+                .toList();
     }
 
     @Override
