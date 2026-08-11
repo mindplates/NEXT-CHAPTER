@@ -9,5 +9,10 @@ dependencies {
     implementation project(':nextchapter-application')
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    // JWT 발급·검증을 직접 구현하지 않는다. resource-server 의 NimbusJwtEncoder/Decoder 와
+    // oauth2ResourceServer DSL 을 쓰면 서명·만료·클레임 검증이 프레임워크 쪽에 남는다 —
+    // 직접 만든 필터는 "만료를 확인하는 줄을 빠뜨려도 통과하는" 실패 방식을 갖는다.
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-security-test'
 }

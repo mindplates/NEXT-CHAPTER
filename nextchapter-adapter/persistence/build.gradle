@@ -7,7 +7,18 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     runtimeOnly 'org.postgresql:postgresql'
+    // 스키마의 원천은 db/migration 의 SQL 이다 (ddl-auto=none). 엔티티가 테이블을 만들게
+    // 두면 컬럼 타입·인덱스·제약이 리뷰에 보이지 않고, pgvector 처럼 확장이 필요한 타입은
+    // 애초에 표현되지 않는다.
+    //
+    // Boot 4 는 자동설정을 기술별 모듈로 쪼갰다. flyway-core 만 넣으면 마이그레이션이
+    // 조용히 실행되지 않으므로 spring-boot-flyway 를 함께 넣는다 (M0 의 Kafka 와 같은 함정).
+    runtimeOnly 'org.springframework.boot:spring-boot-flyway'
+    runtimeOnly 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     // Testcontainers 2.x 는 모듈 아티팩트를 testcontainers-* 로 바꿨다 (구 org.testcontainers:postgresql).
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     testImplementation 'org.testcontainers:testcontainers-postgresql'
