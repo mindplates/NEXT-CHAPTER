@@ -32,7 +32,7 @@ docs/
 | 마일스톤 | 목표 한 줄 | 상태 | 페이즈 |
 |----------|-----------|------|--------|
 | [M0 기반 골격과 CI](roadmap/m0-foundation.md) | 기능 없이 바닥부터 깐다 | ✅ 완료 | 6 / 6 |
-| [M1 카탈로그·주제 매핑](roadmap/m1-catalog.md) | 입력이 하나의 뼈대로 수렴한다 | 🟡 진행 중 | 4 / 6 |
+| [M1 카탈로그·주제 매핑](roadmap/m1-catalog.md) | 입력이 하나의 뼈대로 수렴한다 | ✅ 완료 | 6 / 6 |
 | [M2 뼈대 생성 파이프라인](roadmap/m2-generation.md) | 주제 확정 → published 뼈대 | ⬜ 예정 | 0 / 8 |
 | [M3 학습 경험 (웹)](roadmap/m3-consumption.md) | 소비가 시작되고 신호가 쌓인다 | ⬜ 예정 | 0 / 7 |
 | [M4 개인 루프](roadmap/m4-personal-loop.md) | 방금 답한 결과가 다음 챕터에 반영된다 | ⬜ 예정 | 0 / 5 |

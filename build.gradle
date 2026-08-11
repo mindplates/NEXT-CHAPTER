@@ -81,6 +81,36 @@ subprojects {
             xml.required = true
         }
     }
+
+    // 커버리지 80% 게이트 — 프로젝트 테스트 규칙의 최소치.
+    //
+    // M0 에서는 걸지 않았다. 기능이 없는 단계에 게이트를 걸면 첫날부터 빨간불이 된다.
+    // 첫 도메인 로직이 들어온 M1 이 끝나는 지점이 걸 수 있는 가장 이른 시점이고, 지금 걸지 않으면
+    // 커버리지가 낮은 상태가 기본값이 되어 되돌리는 비용이 계속 커진다.
+    //
+    // 어댑터도 예외를 두지 않는다. 이 제품의 위험이 저장소 경계에 몰려 있어서 어댑터를 면제하면
+    // 정작 깨질 곳이 게이트 밖에 남는다.
+    //
+    // 기준을 INSTRUCTION 으로 잡은 이유는 분기 커버리지가 record 의 생성 검증처럼 분기가 많고
+    // 값이 낮은 코드에 과도하게 민감하기 때문이다.
+    jacocoTestCoverageVerification {
+        dependsOn test
+        violationRules {
+            rule {
+                limit {
+                    counter = 'INSTRUCTION'
+                    value = 'COVEREDRATIO'
+                    minimum = 0.80
+                }
+            }
+        }
+        // 테스트 소스가 없는 모듈(조립만 하는 bootstrap, 소스 없는 adapter 부모)은 검증 대상이 아니다.
+        onlyIf { file("${projectDir}/src/test/java").exists() }
+    }
+
+    tasks.named('check') {
+        dependsOn tasks.named('jacocoTestCoverageVerification')
+    }
 }
 
 // ---------------------------------------------------------------------------
