@@ -85,6 +85,9 @@ class SkeletonGraphServiceTest {
     SaveChapterRelationPort saveChapterRelationPort;
 
     @Mock
+    com.mindplates.nextchapter.application.chapter.port.out.SaveOutboxEventPort saveOutboxEventPort;
+
+    @Mock
     AiGateway aiGateway;
 
     @InjectMocks
@@ -139,6 +142,23 @@ class SkeletonGraphServiceTest {
     }
 
     /** 옛 간선이 새 그래프에 섞이면 순환이 생길 수 있고, 그 순환은 생성 시점 검증을 지나온 뒤라 안 걸린다. */
+    /** Neo4j 를 직접 쓰지 않는다 — 분산 트랜잭션이 없어 한쪽만 성공하면 불일치가 남는다. */
+    @Test
+    @DisplayName("관계와 같은 커밋에 outbox 이벤트를 남긴다")
+    void appendsGraphOutboxEvent() {
+        stubResponse(VALID_RESPONSE);
+
+        service.generate(SKELETON_ID);
+
+        ArgumentCaptor<com.mindplates.nextchapter.domain.chapter.model.OutboxEvent> event =
+                ArgumentCaptor.forClass(com.mindplates.nextchapter.domain.chapter.model.OutboxEvent.class);
+        verify(saveOutboxEventPort).append(event.capture());
+        assertThat(event.getValue().eventType())
+                .isEqualTo(com.mindplates.nextchapter.domain.chapter.model.OutboxEventType.CHAPTER_GRAPH_PERSISTED);
+        assertThat(event.getValue().partitionKey()).isEqualTo(String.valueOf(SKELETON_ID));
+        assertThat(event.getValue().payload()).contains("PREREQUISITE");
+    }
+
     @Test
     @DisplayName("재생성은 관계를 먼저 지운다 — 덮어쓰기여야 한다")
     void replacesRelationsOnRegenerate() {

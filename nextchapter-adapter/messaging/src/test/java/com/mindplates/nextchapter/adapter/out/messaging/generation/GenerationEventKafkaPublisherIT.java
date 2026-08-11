@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mindplates.nextchapter.adapter.out.messaging.outbox.OutboxKafkaPublisher;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import org.testcontainers.kafka.ConfluentKafkaContainer;
 @TestPropertySource(
         properties = {
             "nextchapter.kafka.prefix=it-",
+            "nextchapter.kafka.outbox.prefix=it-",
             "nextchapter.kafka.body-partitions=6",
             "spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer",
             "spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer",
@@ -72,6 +74,12 @@ class GenerationEventKafkaPublisherIT {
     @Autowired
     GenerationTopicProperties topics;
 
+    @Autowired
+    com.mindplates.nextchapter.adapter.out.messaging.outbox.OutboxKafkaPublisher outboxPublisher;
+
+    @Autowired
+    com.mindplates.nextchapter.adapter.out.messaging.outbox.OutboxTopicProperties outboxTopics;
+
     /**
      * 리스너가 같은 모듈에 있어 컴포넌트 스캔에 걸린다. 유스케이스 구현은 application 모듈이라 이
      * 테스트 컨텍스트에 없으므로 목으로 채운다 — 이 테스트가 검증하는 것은 발행이고, 컨슈머 동작은
@@ -90,6 +98,10 @@ class GenerationEventKafkaPublisherIT {
     @MockitoBean
     com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase
             advanceGenerationStageUseCase;
+
+    /** outbox 리스너도 같은 모듈에 있다. 반영 대상(Neo4j)은 graph 모듈이라 목으로 채운다. */
+    @MockitoBean
+    com.mindplates.nextchapter.application.chapter.port.out.GraphSyncPort graphSyncPort;
 
     @Test
     @DisplayName("토픽이 선언한 파티션 수로 만들어진다")
@@ -151,6 +163,25 @@ class GenerationEventKafkaPublisherIT {
         assertThat(partitions).hasSizeGreaterThan(1);
     }
 
+    /** outbox 는 순서가 병렬도보다 중요해 키가 뼈대 ID 다 — 본문 토픽과 반대의 선택이다. */
+    @Test
+    @DisplayName("outbox 이벤트는 뼈대 ID 를 키로, 종류를 헤더로 발행된다")
+    void outboxKeyedBySkeletonWithHeaders() {
+        outboxPublisher.publish(com.mindplates.nextchapter.domain.chapter.model.OutboxEvent.chapterPersisted(
+                5L, 100L, 2, "{\"skeletonId\":5,\"chapterId\":100,\"version\":2}"));
+
+        ConsumerRecord<String, String> record = readOne(outboxTopics.chapterPersisted());
+        assertThat(record.key()).isEqualTo("5");
+        assertThat(new String(record.headers()
+                        .lastHeader(OutboxKafkaPublisher.EVENT_TYPE_HEADER)
+                        .value()))
+                .isEqualTo("CHAPTER_PERSISTED");
+        assertThat(new String(record.headers()
+                        .lastHeader(OutboxKafkaPublisher.IDEMPOTENCY_KEY_HEADER)
+                        .value()))
+                .isEqualTo("chapter:100:v2");
+    }
+
     @Test
     @DisplayName("개요 요청도 뼈대 ID 를 키로 발행된다")
     void outlineKeyedBySkeleton() {
@@ -193,6 +224,13 @@ class GenerationEventKafkaPublisherIT {
         }
     }
 
-    @SpringBootApplication
+    /**
+     * 스캔 범위를 messaging 모듈 루트로 넓힌다. 중첩 클래스의 패키지(generation)만 스캔하면 outbox 쪽 빈이
+     * 빠지고, 그러면 이 테스트가 검증하려는 "생성 토픽과 outbox 토픽의 키 전략이 반대다"를 한 컨텍스트에서
+     * 볼 수 없다.
+     */
+    @SpringBootApplication(scanBasePackages = "com.mindplates.nextchapter.adapter.out.messaging")
+    @org.springframework.boot.context.properties.ConfigurationPropertiesScan(
+            "com.mindplates.nextchapter.adapter.out.messaging")
     static class TestApp {}
 }

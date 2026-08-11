@@ -52,6 +52,9 @@ class ChapterVersioningServiceTest {
     @Mock
     SaveChapterVersionPort saveChapterVersionPort;
 
+    @Mock
+    com.mindplates.nextchapter.application.chapter.port.out.SaveOutboxEventPort saveOutboxEventPort;
+
     @InjectMocks
     ChapterVersioningService service;
 
@@ -99,6 +102,34 @@ class ChapterVersioningServiceTest {
         verify(saveChapterPort).save(saved.capture());
         assertThat(saved.getValue().currentVersion()).isEqualTo(1);
         assertThat(saved.getValue().blockIdSequence()).isEqualTo(3);
+    }
+
+    /**
+     * outbox 행이 본문·버전과 같은 커밋에 들어가는 것이 outbox 패턴의 전부다. 별도 경로로 빠지면 두 단계
+     * 쓰기가 되어 애초에 피하려던 불일치가 돌아온다.
+     */
+    @Test
+    @DisplayName("본문 기록과 함께 outbox 이벤트가 남는다")
+    void appendsOutboxEventInSameCall() {
+        stubChapter(chapter(0, 0));
+        when(loadChapterVersionPort.findLatest(CHAPTER_ID)).thenReturn(Optional.empty());
+        when(saveChapterVersionPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.record(
+                CHAPTER_ID,
+                new RecordChapterBodyCommand(
+                        List.of(ProposedBlock.text(BlockType.PARAGRAPH, "본문")),
+                        ChapterVersionSource.GENERATED,
+                        null,
+                        null));
+
+        ArgumentCaptor<com.mindplates.nextchapter.domain.chapter.model.OutboxEvent> event =
+                ArgumentCaptor.forClass(com.mindplates.nextchapter.domain.chapter.model.OutboxEvent.class);
+        verify(saveOutboxEventPort).append(event.capture());
+        // 멱등 키에 버전이 들어가야 재발행이 옛 상태로 되돌리지 않는다.
+        assertThat(event.getValue().idempotencyKey()).isEqualTo("chapter:100:v1");
+        assertThat(event.getValue().partitionKey()).isEqualTo("1");
+        assertThat(event.getValue().payload()).contains("gradient-descent").contains("\"version\":1");
     }
 
     @Test

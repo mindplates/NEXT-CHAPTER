@@ -5,10 +5,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableAsync
+// outbox 퍼블리셔가 주기적으로 돌아야 한다 — 커밋 시점을 알 수 없으므로 폴링이다.
+@EnableScheduling
 public class NextChapterApplication {
 
     public static void main(String[] args) {

@@ -6,6 +6,8 @@ import com.mindplates.nextchapter.application.catalog.port.out.LoadCatalogTopicP
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.SaveChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.SaveChapterRelationPort;
+import com.mindplates.nextchapter.application.chapter.port.out.SaveOutboxEventPort;
+import com.mindplates.nextchapter.application.chapter.service.OutboxPayloads;
 import com.mindplates.nextchapter.application.generation.port.in.GenerateSkeletonGraphUseCase;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
@@ -15,6 +17,7 @@ import com.mindplates.nextchapter.domain.catalog.model.CatalogField;
 import com.mindplates.nextchapter.domain.catalog.model.CatalogTopic;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
 import com.mindplates.nextchapter.domain.chapter.model.ChapterRelation;
+import com.mindplates.nextchapter.domain.chapter.model.OutboxEvent;
 import com.mindplates.nextchapter.domain.chapter.model.ProposedChapter;
 import com.mindplates.nextchapter.domain.chapter.model.ProposedChapterGraph;
 import com.mindplates.nextchapter.domain.skeleton.model.Skeleton;
@@ -53,6 +56,7 @@ public class SkeletonGraphService implements GenerateSkeletonGraphUseCase {
     private final LoadChapterPort loadChapterPort;
     private final SaveChapterPort saveChapterPort;
     private final SaveChapterRelationPort saveChapterRelationPort;
+    private final SaveOutboxEventPort saveOutboxEventPort;
     private final AiGateway aiGateway;
 
     @Override
@@ -125,5 +129,10 @@ public class SkeletonGraphService implements GenerateSkeletonGraphUseCase {
                         relation.relationType()))
                 .toList();
         saveChapterRelationPort.saveAll(relations);
+
+        // 관계와 같은 커밋에 outbox 행을 넣는다. Neo4j 는 파생이므로 여기서 직접 쓰지 않는다 —
+        // 분산 트랜잭션이 없어 한쪽만 성공하면 본문 없는 노드나 그래프에 없는 챕터가 남는다.
+        saveOutboxEventPort.append(OutboxEvent.chapterGraphPersisted(
+                skeletonId, relations.size(), OutboxPayloads.chapterGraphPersisted(skeletonId, relations)));
     }
 }

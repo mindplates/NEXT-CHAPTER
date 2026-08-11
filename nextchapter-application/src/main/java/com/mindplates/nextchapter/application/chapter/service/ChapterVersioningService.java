@@ -7,12 +7,14 @@ import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
 import com.mindplates.nextchapter.application.chapter.port.out.SaveChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.SaveChapterVersionPort;
+import com.mindplates.nextchapter.application.chapter.port.out.SaveOutboxEventPort;
 import com.mindplates.nextchapter.application.chapter.view.ChapterBodyView;
 import com.mindplates.nextchapter.application.chapter.view.ChapterVersionSummaryView;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.domain.chapter.model.BlockDocument;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
 import com.mindplates.nextchapter.domain.chapter.model.ChapterVersion;
+import com.mindplates.nextchapter.domain.chapter.model.OutboxEvent;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class ChapterVersioningService implements RecordChapterBodyUseCase, GetCh
     private final SaveChapterPort saveChapterPort;
     private final LoadChapterVersionPort loadChapterVersionPort;
     private final SaveChapterVersionPort saveChapterVersionPort;
+    private final SaveOutboxEventPort saveOutboxEventPort;
 
     @Override
     public ChapterVersion record(Long chapterId, RecordChapterBodyCommand command) {
@@ -64,6 +67,15 @@ public class ChapterVersioningService implements RecordChapterBodyUseCase, GetCh
                 null));
         // 카운터는 승계가 소비한 값으로 올라간다. 되돌리지 않는 것이 ID 재사용을 막는 장치다.
         saveChapterPort.save(chapter.withNewVersion(nextVersion, succession.nextSequence() - 1));
+
+        // outbox 행이 본문·버전과 **같은 커밋**에 들어간다. 이것이 outbox 패턴의 전부다 — 커밋이
+        // 성공했다면 이벤트는 반드시 남아 있고, 퍼블리셔가 언제든 다시 집어 갈 수 있다.
+        saveOutboxEventPort.append(OutboxEvent.chapterPersisted(
+                chapter.skeletonId(),
+                chapterId,
+                nextVersion,
+                OutboxPayloads.chapterPersisted(
+                        chapter.skeletonId(), chapterId, chapter.chapterKey(), chapter.title(), nextVersion)));
 
         log.info(
                 "[챕터] 본문 기록 chapterId={} version={} blocks={} source={}",
