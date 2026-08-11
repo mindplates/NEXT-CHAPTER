@@ -36,7 +36,7 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
  */
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, SecretsProperties.class})
 public class SecurityConfig {
 
     private static final String ADMIN_API = "/api/admin/**";

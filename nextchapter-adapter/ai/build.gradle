@@ -6,6 +6,11 @@ dependencies {
     implementation project(':nextchapter-domain')
     implementation project(':nextchapter-application')
     implementation 'org.springframework:spring-web'
+    implementation 'org.springframework:spring-context'
+    // @ConfigurationProperties 만 쓴다. 웹 자동설정에 의존하지 않으려고 starter 를 넣지 않았다 —
+    // 이 어댑터는 배치·컨슈머처럼 웹 없이 뜨는 조립에서도 쓰인다.
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
