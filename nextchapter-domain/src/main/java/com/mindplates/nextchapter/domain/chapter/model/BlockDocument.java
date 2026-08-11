@@ -66,6 +66,14 @@ public record BlockDocument(List<Block> blocks) {
                 .toList();
     }
 
+    /**
+     * 출처를 달고 있는 블록. 하나도 없으면 검증 패스가 검사할 대상이 없다 — 그 상태는 "검증을 통과했다"와
+     * 구분되지 않으므로 생성 시점에 확인해야 한다.
+     */
+    public List<Block> sourcedBlocks() {
+        return blocks.stream().filter(Block::hasSources).toList();
+    }
+
     public List<Block> quizBlocks() {
         return blocks.stream().filter(block -> block.type() == BlockType.QUIZ).toList();
     }

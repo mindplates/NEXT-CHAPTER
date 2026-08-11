@@ -85,6 +85,9 @@ class GenerationEventKafkaPublisherIT {
             generateChapterOutlinesUseCase;
 
     @MockitoBean
+    com.mindplates.nextchapter.application.generation.port.in.GenerateChapterBodyUseCase generateChapterBodyUseCase;
+
+    @MockitoBean
     com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase
             advanceGenerationStageUseCase;
 

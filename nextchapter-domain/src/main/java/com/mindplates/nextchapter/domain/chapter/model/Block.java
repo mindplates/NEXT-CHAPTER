@@ -13,6 +13,15 @@ import java.util.Map;
  */
 public record Block(String id, BlockType type, String text, Map<String, Object> attributes) {
 
+    /**
+     * 출처 근거가 담기는 속성 키.
+     *
+     * <p>출처를 별도 블록 타입이나 별도 테이블이 아니라 <b>주장을 하는 블록의 속성</b>으로 두는 이유는
+     * 검증 패스가 "주장–출처 일치"를 검사하기 때문이다. 둘이 떨어져 있으면 어느 주장에 어느 출처가
+     * 붙는지를 다시 추정해야 하고, 그 추정이 틀리면 검증이 통과했다는 사실 자체가 무의미해진다.
+     */
+    public static final String SOURCES = "sources";
+
     public Block {
         if (!BlockIds.isValid(id)) {
             throw new IllegalArgumentException("블록 ID 형식이 아닙니다: " + id);
@@ -59,5 +68,11 @@ public record Block(String id, BlockType type, String text, Map<String, Object> 
     /** ID 를 새로 발급받은 사본. 승계에 실패한 블록이 이 경로로 새 ID 를 받는다. */
     public Block withId(String newId) {
         return new Block(newId, type, text, attributes);
+    }
+
+    /** 이 블록이 출처를 달고 있는지. 검증 패스가 검사할 대상을 고르는 기준이다. */
+    public boolean hasSources() {
+        Object sources = attributes.get(SOURCES);
+        return sources instanceof java.util.Collection<?> collection && !collection.isEmpty();
     }
 }
