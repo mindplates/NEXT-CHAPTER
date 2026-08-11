@@ -98,6 +98,10 @@ class TopicResolutionServiceTest {
     EmbedTopicUseCase embedTopicUseCase;
 
     @Mock
+    com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase
+            startSkeletonGenerationUseCase;
+
+    @Mock
     AiGateway aiGateway;
 
     @InjectMocks
@@ -279,6 +283,8 @@ class TopicResolutionServiceTest {
         assertThat(view.resolution()).isEqualTo(TopicInputResolution.NEW_TOPIC_CREATED);
         verify(embedTopicUseCase).embed(31L);
         verify(manageTopicAliasUseCase).add(31L, "강화학습 알려줘");
+        // 신규 주제가 곧 신규 뼈대다 — 생성을 걸지 않으면 소비할 것이 없는 주제를 사용자가 받는다.
+        verify(startSkeletonGenerationUseCase).start(31L);
     }
 
     @Test

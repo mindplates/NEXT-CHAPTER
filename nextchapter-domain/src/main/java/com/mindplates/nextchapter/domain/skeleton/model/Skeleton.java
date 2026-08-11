@@ -23,8 +23,27 @@ public record Skeleton(Long id, Long topicId, SkeletonStatus status, LocalDateTi
         return new Skeleton(null, topicId, SkeletonStatus.GENERATING_GRAPH, null, null);
     }
 
-    public Skeleton withStatus(SkeletonStatus next) {
+    /**
+     * 상태를 전이한다. 허용되지 않은 전이는 거절한다.
+     *
+     * <p>검증을 도메인에 두는 이유는 전이가 여러 곳에서 일어나기 때문이다 — 각 단계 컨슈머, 실패
+     * 처리, 운영자의 재시도. 호출부마다 규칙을 복제하면 한 곳만 빠뜨려도 단계를 건너뛴 뼈대가 생기고,
+     * 그 뼈대는 개요 없이 본문이 쓰인 상태로 published 에 도달할 수 있다.
+     */
+    public Skeleton transitionTo(SkeletonStatus next) {
+        if (!status.canTransitionTo(next)) {
+            throw new IllegalArgumentException("허용되지 않은 상태 전이입니다: " + status + " → " + next);
+        }
         return new Skeleton(id, topicId, next, createdAt, updatedAt);
+    }
+
+    /** 다음 생성 단계로. 파이프라인 컨슈머가 자기 단계를 끝내고 부르는 경로다. */
+    public Skeleton advance() {
+        return transitionTo(status.next());
+    }
+
+    public Skeleton fail() {
+        return transitionTo(SkeletonStatus.FAILED);
     }
 
     public boolean isPublished() {

@@ -8,5 +8,11 @@ dependencies {
     // 만들어지지 않으므로 starter 를 쓴다.
     implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation 'org.springframework.boot:spring-boot-health'
+    // 페이로드는 문자열 JSON 이다. Spring Kafka 의 타입 헤더를 쓰지 않는 이유는 헤더에 Java 클래스
+    // 이름이 박혀서, 클래스를 옮기는 것만으로 토픽에 쌓인 옛 메시지가 죽기 때문이다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-kafka'
 }

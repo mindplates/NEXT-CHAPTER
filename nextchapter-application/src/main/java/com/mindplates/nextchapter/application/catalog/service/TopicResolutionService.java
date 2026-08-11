@@ -14,6 +14,7 @@ import com.mindplates.nextchapter.application.catalog.port.out.LoadTopicInputLog
 import com.mindplates.nextchapter.application.catalog.port.out.SaveTopicInputLogPort;
 import com.mindplates.nextchapter.application.catalog.view.TopicResolutionView;
 import com.mindplates.nextchapter.application.catalog.view.TopicSimilarityView;
+import com.mindplates.nextchapter.application.generation.port.in.StartSkeletonGenerationUseCase;
 import com.mindplates.nextchapter.application.generation.service.AiGateway;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
@@ -76,6 +77,7 @@ public class TopicResolutionService implements ResolveTopicInputUseCase {
     private final ManageTopicAliasUseCase manageTopicAliasUseCase;
     private final SearchSimilarTopicsUseCase searchSimilarTopicsUseCase;
     private final EmbedTopicUseCase embedTopicUseCase;
+    private final StartSkeletonGenerationUseCase startSkeletonGenerationUseCase;
     private final AiGateway aiGateway;
 
     @Override
@@ -140,9 +142,11 @@ public class TopicResolutionService implements ResolveTopicInputUseCase {
                 new CreateCatalogTopicCommand(field.id(), uniqueSlug(pending), name, null, 0));
         promoteToAlias(created.id(), pending.rawInput());
         embedQuietly(created.id());
+        // 신규 주제가 곧 신규 뼈대다. 여기서 생성을 걸지 않으면 사용자는 소비할 것이 없는 주제를 받는다.
+        startSkeletonGenerationUseCase.start(created.id());
 
         TopicInputLog saved = saveTopicInputLogPort.save(pending.resolvedByNewTopic(created.id()));
-        log.info("[매핑] 후보 전부 거절 → 신규 주제 등록 topicId={} slug={}", created.id(), created.slug());
+        log.info("[매핑] 후보 전부 거절 → 신규 주제 등록 + 뼈대 생성 시작 topicId={} slug={}", created.id(), created.slug());
         return matchedView(saved, created);
     }
 

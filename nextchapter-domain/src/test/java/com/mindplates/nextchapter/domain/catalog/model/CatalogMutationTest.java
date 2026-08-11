@@ -36,9 +36,9 @@ class CatalogMutationTest {
     @Test
     @DisplayName("뼈대는 상태 전이마다 새 인스턴스이고 주제는 고정이다")
     void skeletonKeepsTopic() {
-        Skeleton skeleton = new Skeleton(5L, 42L, SkeletonStatus.GENERATING_OUTLINES, null, null);
+        Skeleton skeleton = new Skeleton(5L, 42L, SkeletonStatus.GENERATING_BODIES, null, null);
 
-        Skeleton advanced = skeleton.withStatus(SkeletonStatus.GENERATING_ASSETS);
+        Skeleton advanced = skeleton.transitionTo(SkeletonStatus.GENERATING_ASSETS);
 
         assertThat(advanced.topicId()).isEqualTo(42L);
         assertThat(advanced.id()).isEqualTo(5L);
