@@ -13,32 +13,32 @@ docs/
   README.md                    ← 이 파일. 인덱스 + 진행 대시보드
   roadmap/
     README.md                  ← 로드맵 전체: 마일스톤, 의존 관계, 크리티컬 패스
-    m0-foundation/             ← 기반 골격과 CI
-    m1-catalog/                ← 카탈로그와 주제 매핑
-    m2-generation/             ← 뼈대 생성 파이프라인
-    m3-consumption/            ← 학습 경험 (웹)
-    m4-personal-loop/          ← 개인 루프
-    m5-collective-loop/        ← 집단 루프  ★ 3개월 필수 기준
-    m6-delivery-formats/       ← 딜리버리 확장 (영상·PPT)
-    m7-operations/             ← 운영 성숙
+    m0-foundation.md           ← 기반 골격과 CI
+    m1-catalog.md              ← 카탈로그와 주제 매핑
+    m2-generation.md           ← 뼈대 생성 파이프라인
+    m3-consumption.md          ← 학습 경험 (웹)
+    m4-personal-loop.md        ← 개인 루프
+    m5-collective-loop.md      ← 집단 루프  ★ 3개월 필수 기준
+    m6-delivery-formats.md     ← 딜리버리 확장 (영상·PPT)
+    m7-operations.md           ← 운영 성숙
 ```
 
-마일스톤 하나가 폴더 하나이고, 그 안의 `README.md`가 목표·완료 기준·페이즈·미결정 항목을
-전부 담는다. 문서를 파일로 흩지 않는 이유는 **한 마일스톤의 상태를 한 화면에서 봐야** 하기
-때문이다.
+**마일스톤 하나가 파일 하나다.** 목표·완료 기준·페이즈·미결정 항목을 한 문서에 담아 상태를 한
+화면에서 본다. 문서를 더 쪼개지 않는 이유가 그것이고, 반대로 마일스톤마다 폴더를 두지 않는
+이유는 파일 하나짜리 폴더가 경로만 길게 만들기 때문이다.
 
 ## 진행 대시보드
 
 | 마일스톤 | 목표 한 줄 | 상태 | 페이즈 |
 |----------|-----------|------|--------|
-| [M0 기반 골격과 CI](roadmap/m0-foundation/) | 기능 없이 바닥부터 깐다 | ✅ 완료 | 6 / 6 |
-| [M1 카탈로그·주제 매핑](roadmap/m1-catalog/) | 입력이 하나의 뼈대로 수렴한다 | ⬜ 예정 | 0 / 6 |
-| [M2 뼈대 생성 파이프라인](roadmap/m2-generation/) | 주제 확정 → published 뼈대 | ⬜ 예정 | 0 / 8 |
-| [M3 학습 경험 (웹)](roadmap/m3-consumption/) | 소비가 시작되고 신호가 쌓인다 | ⬜ 예정 | 0 / 7 |
-| [M4 개인 루프](roadmap/m4-personal-loop/) | 방금 답한 결과가 다음 챕터에 반영된다 | ⬜ 예정 | 0 / 5 |
-| [M5 집단 루프](roadmap/m5-collective-loop/) ★ | 신호가 뼈대를 고치고, 개선을 확인한다 | ⬜ 예정 | 0 / 7 |
-| [M6 딜리버리 확장](roadmap/m6-delivery-formats/) | 영상·PPT로 뻗는다 | ⬜ 예정 | 0 / 7 |
-| [M7 운영 성숙](roadmap/m7-operations/) | 운영자가 서비스를 굴릴 수 있다 | ⬜ 예정 | 0 / 7 |
+| [M0 기반 골격과 CI](roadmap/m0-foundation.md) | 기능 없이 바닥부터 깐다 | ✅ 완료 | 6 / 6 |
+| [M1 카탈로그·주제 매핑](roadmap/m1-catalog.md) | 입력이 하나의 뼈대로 수렴한다 | ⬜ 예정 | 0 / 6 |
+| [M2 뼈대 생성 파이프라인](roadmap/m2-generation.md) | 주제 확정 → published 뼈대 | ⬜ 예정 | 0 / 8 |
+| [M3 학습 경험 (웹)](roadmap/m3-consumption.md) | 소비가 시작되고 신호가 쌓인다 | ⬜ 예정 | 0 / 7 |
+| [M4 개인 루프](roadmap/m4-personal-loop.md) | 방금 답한 결과가 다음 챕터에 반영된다 | ⬜ 예정 | 0 / 5 |
+| [M5 집단 루프](roadmap/m5-collective-loop.md) ★ | 신호가 뼈대를 고치고, 개선을 확인한다 | ⬜ 예정 | 0 / 7 |
+| [M6 딜리버리 확장](roadmap/m6-delivery-formats.md) | 영상·PPT로 뻗는다 | ⬜ 예정 | 0 / 7 |
+| [M7 운영 성숙](roadmap/m7-operations.md) | 운영자가 서비스를 굴릴 수 있다 | ⬜ 예정 | 0 / 7 |
 
 ★ = 3개월 성공 기준의 **필수 항목**을 직접 달성하는 마일스톤.
 

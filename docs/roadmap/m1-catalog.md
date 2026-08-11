@@ -4,8 +4,8 @@
 |---|---|
 | 상태 | ⬜ 예정 |
 | 페이즈 | 0 / 6 |
-| 선행 | [M0 기반 골격과 CI](../m0-foundation/) |
-| 후행 | [M2 뼈대 생성 파이프라인](../m2-generation/) |
+| 선행 | [M0 기반 골격과 CI](m0-foundation.md) |
+| 후행 | [M2 뼈대 생성 파이프라인](m2-generation.md) |
 | 설계 근거 | `CLAUDE.md` → Project Overview → 필수 제약: 주제 통합 / AI 프로바이더 |
 
 ## 목표

@@ -4,8 +4,8 @@
 |---|---|
 | 상태 | ⬜ 예정 |
 | 페이즈 | 0 / 7 |
-| 선행 | [M2 뼈대 생성 파이프라인](../m2-generation/) |
-| 후행 | [M4 개인 루프](../m4-personal-loop/) · [M5 집단 루프](../m5-collective-loop/) · [M6 딜리버리 확장](../m6-delivery-formats/) |
+| 선행 | [M2 뼈대 생성 파이프라인](m2-generation.md) |
+| 후행 | [M4 개인 루프](m4-personal-loop.md) · [M5 집단 루프](m5-collective-loop.md) · [M6 딜리버리 확장](m6-delivery-formats.md) |
 | 설계 근거 | `CLAUDE.md` → Architecture → 합성과 렌더의 경계 / 캐시 / 신호 경로 |
 
 ## 목표

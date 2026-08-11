@@ -41,14 +41,14 @@ M4 개인 루프   M5 집단 루프 ★            M6 딜리버리 확장
 
 | | 마일스톤 | 목표 | 완료의 의미 |
 |---|----------|------|------------|
-| [M0](m0-foundation/) | 기반 골격과 CI | 기능 없이 바닥을 깐다 | 이후 모든 작업이 같은 바닥에서 시작한다 |
-| [M1](m1-catalog/) | 카탈로그 · 주제 매핑 | 자유 입력이 하나의 뼈대로 수렴 | "머신러닝 / 기계학습 / ML 입문"이 같은 주제 ID |
-| [M2](m2-generation/) | 뼈대 생성 파이프라인 | 주제 확정 → published | 완결된 뼈대가 존재한다 |
-| [M3](m3-consumption/) | 학습 경험 (웹) | 소비 + 신호 수집 | 블록 단위 신호가 쌓이기 시작한다 |
-| [M4](m4-personal-loop/) | 개인 루프 | 즉시 반영되는 개인화 | 사람마다 경로·보충·난이도가 달라진다 |
-| [M5](m5-collective-loop/) ★ | 집단 루프 | 신호 → 뼈대 수정 → 효과 확인 | **제품의 핵심 가설이 증명된다** |
-| [M6](m6-delivery-formats/) | 딜리버리 확장 | 영상 · PPT | 한 소스가 세 형태로 뻗는다 |
-| [M7](m7-operations/) | 운영 성숙 | 운영자 도구와 시드 | 서비스를 실제로 굴릴 수 있다 |
+| [M0](m0-foundation.md) | 기반 골격과 CI | 기능 없이 바닥을 깐다 | 이후 모든 작업이 같은 바닥에서 시작한다 |
+| [M1](m1-catalog.md) | 카탈로그 · 주제 매핑 | 자유 입력이 하나의 뼈대로 수렴 | "머신러닝 / 기계학습 / ML 입문"이 같은 주제 ID |
+| [M2](m2-generation.md) | 뼈대 생성 파이프라인 | 주제 확정 → published | 완결된 뼈대가 존재한다 |
+| [M3](m3-consumption.md) | 학습 경험 (웹) | 소비 + 신호 수집 | 블록 단위 신호가 쌓이기 시작한다 |
+| [M4](m4-personal-loop.md) | 개인 루프 | 즉시 반영되는 개인화 | 사람마다 경로·보충·난이도가 달라진다 |
+| [M5](m5-collective-loop.md) ★ | 집단 루프 | 신호 → 뼈대 수정 → 효과 확인 | **제품의 핵심 가설이 증명된다** |
+| [M6](m6-delivery-formats.md) | 딜리버리 확장 | 영상 · PPT | 한 소스가 세 형태로 뻗는다 |
+| [M7](m7-operations.md) | 운영 성숙 | 운영자 도구와 시드 | 서비스를 실제로 굴릴 수 있다 |
 
 ## 이 로드맵이 전제하는 결정
 
@@ -81,17 +81,17 @@ M2~M5 구간에서는 활성 형태가 `web` 하나이므로 조건이 그대로
 
 | 미결정 항목 | 정산 시점 |
 |-------------|-----------|
-| ~~프론트엔드 구조 (상태·라우팅·디렉터리)~~ | [M0](m0-foundation/) 에서 확정 ✅ |
-| Kafka 토픽 네이밍 · 파티션 전략 | [M2](m2-generation/) |
-| 블록 ID 안정성 유지 방식 | [M2](m2-generation/) 에서 설계, [M5](m5-collective-loop/) 에서 검증 |
-| 소셜 로그인 제공자 | [M3](m3-consumption/) |
-| 임계치 · 상한의 실제 수치 | [M5](m5-collective-loop/) |
-| 오브젝트 스토리지 · TTS · 영상 렌더 수단 | [M6](m6-delivery-formats/) |
-| 구버전 자산 안내 표시 여부 | [M6](m6-delivery-formats/) |
-| 검증 패스의 적용 범위 | [M7](m7-operations/) |
-| 관리자 역할 세분화 | [M7](m7-operations/) |
-| Kafka · Neo4j 운영 형태 | [M7](m7-operations/) |
-| Neo4j 재구축 절차 | [M7](m7-operations/) |
+| ~~프론트엔드 구조 (상태·라우팅·디렉터리)~~ | [M0](m0-foundation.md) 에서 확정 ✅ |
+| Kafka 토픽 네이밍 · 파티션 전략 | [M2](m2-generation.md) |
+| 블록 ID 안정성 유지 방식 | [M2](m2-generation.md) 에서 설계, [M5](m5-collective-loop.md) 에서 검증 |
+| 소셜 로그인 제공자 | [M3](m3-consumption.md) |
+| 임계치 · 상한의 실제 수치 | [M5](m5-collective-loop.md) |
+| 오브젝트 스토리지 · TTS · 영상 렌더 수단 | [M6](m6-delivery-formats.md) |
+| 구버전 자산 안내 표시 여부 | [M6](m6-delivery-formats.md) |
+| 검증 패스의 적용 범위 | [M7](m7-operations.md) |
+| 관리자 역할 세분화 | [M7](m7-operations.md) |
+| Kafka · Neo4j 운영 형태 | [M7](m7-operations.md) |
+| Neo4j 재구축 절차 | [M7](m7-operations.md) |
 
 ## 로드맵을 이렇게 자른 이유
 

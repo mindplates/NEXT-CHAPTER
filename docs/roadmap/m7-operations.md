@@ -4,7 +4,7 @@
 |---|---|
 | 상태 | ⬜ 예정 |
 | 페이즈 | 0 / 7 |
-| 선행 | [M5 집단 루프](../m5-collective-loop/) · [M6 딜리버리 확장](../m6-delivery-formats/) |
+| 선행 | [M5 집단 루프](m5-collective-loop.md) · [M6 딜리버리 확장](m6-delivery-formats.md) |
 | 후행 | 없음 |
 | 설계 근거 | `CLAUDE.md` → Project Overview → 관리자 콘솔 / 생성 정확성 검증 |
 
