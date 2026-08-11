@@ -81,6 +81,10 @@ class GenerationEventKafkaPublisherIT {
     com.mindplates.nextchapter.application.generation.port.in.GenerateSkeletonGraphUseCase generateSkeletonGraphUseCase;
 
     @MockitoBean
+    com.mindplates.nextchapter.application.generation.port.in.GenerateChapterOutlinesUseCase
+            generateChapterOutlinesUseCase;
+
+    @MockitoBean
     com.mindplates.nextchapter.application.generation.port.in.AdvanceGenerationStageUseCase
             advanceGenerationStageUseCase;
 
