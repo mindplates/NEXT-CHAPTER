@@ -309,8 +309,11 @@ React + Vite + TypeScript. **서버 상태는 TanStack Query, 클라이언트 �
 
 #### ecc 훅
 
-ecc 플러그인 훅은 TypeScript 전제로 짜여 있다(edit 시 Prettier/tsc). **백엔드 쪽은 스택에 맞게
-커스터마이징이 필요하다** — 포크의 `hooks/hooks.json`을 수정한다.
+ecc 플러그인 훅은 TypeScript 전제로 짜여 있었다(edit 시 Prettier/tsc). 그 훅들은 **그대로 둔다** —
+프론트엔드가 TypeScript다. 대신 포크의 `hooks/hooks.json`에 Java 대응 훅을 **추가**했다.
+
+Gradle을 부르는 포매터·컴파일 훅은 두지 않는다. 편집마다 JVM이 뜨면 편집 자체보다 비용이
+커진다. 백엔드 포맷·컴파일은 빌드(Spotless를 `check`에 연결)와 CI가 맡는다.
 
 ### 3개월 성공 기준
 
@@ -734,6 +737,12 @@ There is no way to disable a single hook from settings — hooks merge across so
 only `disableAllHooks` (all-or-nothing) exists. To drop another one, edit `hooks/hooks.json`
 in the fork and push.
 
-**TODO (stack fit):** the edit-time hooks assume TypeScript (Prettier, `tsc`). The backend is
-Spring Boot/Java, so those hooks need to be swapped for Java-side equivalents (formatter +
-compile check) in the fork's `hooks/hooks.json`. Not done yet.
+**Stack fit.** The edit-time hooks assume TypeScript (Prettier, `tsc`). Those stay — the
+frontend is TypeScript. What was added is the Java **counterpart**, not a replacement:
+a `System.out`/`System.err`/`printStackTrace` warning on `.java` edits, mirroring the
+`console.log` hook ([fork PR #1](https://github.com/mindplates/everything-claude-code/pull/1),
+awaiting merge).
+
+**No Gradle hook on edit.** Formatting and compilation for the backend run in the build, not
+per edit — Spotless is wired into `check`, and CI runs `./gradlew build`. Invoking Gradle on
+every edit costs seconds per edit; a JVM start dwarfs the edit itself.

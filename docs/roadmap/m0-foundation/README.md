@@ -116,9 +116,14 @@ HTTP 로 확인한다 — 스토리지 수단이 M6 의 미결정 항목이라 �
       google-java-format 이 아닌 이유는 2-space 라 WORKS 관례와 어긋나기 때문이다.
       **편집 훅이 아니라 빌드에서 강제한다** — 편집마다 Gradle 을 부르면 수 초가 붙어
       실용성이 없고, 어긋난 포맷은 빌드가 잡으면 충분하다. 실제 위반을 넣어 실패를 확인했다.
-- [ ] **ecc 훅의 Java 인지** — edit 훅이 TypeScript 전제다. 다만 **교체가 아니라 추가**다 —
-      `nextchapter-react-app` 이 TypeScript라 Prettier·tsc 훅은 계속 필요하다. 포크의
-      `hooks/hooks.json` 수정 건이라 이 저장소 밖 작업이다.
+- [x] **ecc 훅의 Java 인지** — `.java` 편집 시 `System.out`/`System.err`/`printStackTrace` 를
+      경고하는 훅을 추가했다(JS/TS 의 `console.log` 훅과 대응). **교체가 아니라 추가다** —
+      `nextchapter-react-app` 이 TypeScript라 Prettier·tsc 훅은 계속 필요하다.
+      → [mindplates/everything-claude-code#1](https://github.com/mindplates/everything-claude-code/pull/1)
+      (공유 저장소라 main 직접 반영 대신 PR. **머지 대기 중**)
+
+      Gradle 을 부르는 포매터·컴파일 훅은 넣지 않았다. 편집마다 JVM 이 뜨면 편집 자체보다
+      비용이 커진다. 그 역할은 위의 Spotless 와 CI 가 맡는다.
 - [ ] **커버리지 80% 게이트** — 리포트는 나오지만 게이트는 아직 없다. M1에서 건다.
 - [x] **CI 실측** — 원격에서 초록. Testcontainers 가 러너에서 실제로 컨테이너를 띄워
       pgvector 확장까지 검증하는 것을 확인했다. 이 과정에서 `.gitignore` 결함을 잡았다.
