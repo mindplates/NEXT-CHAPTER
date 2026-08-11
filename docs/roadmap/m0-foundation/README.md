@@ -129,6 +129,12 @@ HTTP 로 확인한다 — 스토리지 수단이 M6 의 미결정 항목이라 �
 | `KafkaAdmin` 빈 없음 | Boot 4 는 자동설정을 기술별 모듈로 분리 | `spring-kafka` → `spring-boot-starter-kafka` |
 | `org.testcontainers:postgresql` 해석 실패 | Testcontainers 2.x 가 아티팩트를 `testcontainers-*` 로 개명, 클래스도 `org.testcontainers.postgresql` 로 이동 | 새 좌표·패키지로 교체 |
 | 프론트 빌드가 `erasableSyntaxOnly` 로 실패 | 생성자 파라미터 프로퍼티 사용 | 필드를 명시적으로 선언 |
+| **`adapter/out/` 소스 11개가 커밋에서 통째로 빠짐** | `.gitignore` 의 앵커 없는 `out/` 규칙이 IDE 출력 디렉터리뿐 아니라 **헥사고날 out 어댑터 패키지 전체**를 매칭 | `/out/` 으로 루트 고정 |
+
+마지막 항목은 로컬에서 전혀 드러나지 않았다. 파일이 디스크에 있으니 빌드도 헬스체크도 전부
+통과했고, **원격 CI 가 `persistence:test NO-SOURCE` 를 찍고서야** 저장소에 소스가 없다는 것이
+보였다. P0.5의 "CI 실측"이 형식적인 확인이 아니었던 이유다 — 로컬 성공과 저장소 상태는 다른
+것이고, 그 차이는 조용히 틀린다.
 
 ## 리스크
 

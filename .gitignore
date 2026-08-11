@@ -9,7 +9,8 @@ build/
 *.iml
 *.ipr
 *.iws
-out/
+# 루트 고정 — 앵커가 없으면 헥사고날의 adapter/out/ 패키지를 통째로 삼킨다.
+/out/
 
 # Java
 *.class
