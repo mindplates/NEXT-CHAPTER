@@ -8,8 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.mindplates.nextchapter.adapter.in.web.support.GlobalExceptionHandler;
 import com.mindplates.nextchapter.application.layer.port.in.GetChapterLayerUseCase;
+import com.mindplates.nextchapter.application.layer.port.in.RecommendNextChapterUseCase;
 import com.mindplates.nextchapter.application.layer.view.ChapterUnderstandingView;
+import com.mindplates.nextchapter.application.layer.view.NextChapterView;
 import com.mindplates.nextchapter.application.layer.view.SkeletonLayerView;
+import com.mindplates.nextchapter.domain.layer.model.RecommendationReason;
 import com.mindplates.nextchapter.domain.layer.model.UnderstandingLevel;
 import java.security.Principal;
 import java.util.List;
@@ -31,6 +34,9 @@ class LearnerLayerControllerTest {
 
     @MockitoBean
     GetChapterLayerUseCase getChapterLayerUseCase;
+
+    @MockitoBean
+    RecommendNextChapterUseCase recommendNextChapterUseCase;
 
     private static ChapterUnderstandingView chapter(Long id, UnderstandingLevel level) {
         return new ChapterUnderstandingView(id, "a", "가", 4, 1, 2, 60, level, false, null);
@@ -64,6 +70,29 @@ class LearnerLayerControllerTest {
                 .andExpect(status().isOk());
 
         verify(getChapterLayerUseCase).byChapterId(42L, 100L);
+    }
+
+    /** 이유를 함께 내려야 사용자가 "왜 앞으로 안 가고 뒤로 가나"에 납득할 수 있다. */
+    @Test
+    @DisplayName("다음 챕터 후보에 이유와 이해도가 실린다")
+    void nextCandidates() throws Exception {
+        when(recommendNextChapterUseCase.next(42L, 100L))
+                .thenReturn(new NextChapterView(
+                        100L,
+                        UnderstandingLevel.STRUGGLING,
+                        List.of(new NextChapterView.Candidate(
+                                10L,
+                                "prev",
+                                "선행 챕터",
+                                RecommendationReason.PREREQUISITE_GAP,
+                                UnderstandingLevel.LEARNING,
+                                false))));
+
+        mockMvc.perform(get("/api/chapters/100/next").principal(principal("42")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.currentLevel").value("STRUGGLING"))
+                .andExpect(jsonPath("$.data.candidates[0].chapterId").value(10))
+                .andExpect(jsonPath("$.data.candidates[0].reason").value("PREREQUISITE_GAP"));
     }
 
     @Test
