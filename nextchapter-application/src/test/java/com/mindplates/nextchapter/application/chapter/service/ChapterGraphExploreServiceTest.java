@@ -17,6 +17,7 @@ import com.mindplates.nextchapter.application.chapter.view.ChapterNeighborhoodVi
 import com.mindplates.nextchapter.application.chapter.view.ChapterNodeView;
 import com.mindplates.nextchapter.application.chapter.view.SkeletonEntryView;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
+import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
 import com.mindplates.nextchapter.domain.chapter.model.ChapterRelationType;
@@ -24,10 +25,10 @@ import com.mindplates.nextchapter.domain.skeleton.model.Skeleton;
 import com.mindplates.nextchapter.domain.skeleton.model.SkeletonStatus;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -49,8 +50,17 @@ class ChapterGraphExploreServiceTest {
     @Mock
     LoadChapterGraphPort loadChapterGraphPort;
 
-    @InjectMocks
     ChapterGraphExploreService service;
+
+    /**
+     * 가드를 목으로 바꾸지 않고 실제 인스턴스를 쓴다. 검증 대상이 "공개되지 않은 뼈대가 새지 않는가"이고,
+     * 가드를 목으로 두면 그 판정이 정확히 테스트에서 빠진다.
+     */
+    @BeforeEach
+    void setUp() {
+        service = new ChapterGraphExploreService(
+                new PublishedSkeletonGuard(loadSkeletonPort), loadChapterPort, loadChapterGraphPort);
+    }
 
     private static Skeleton skeleton(SkeletonStatus status) {
         return new Skeleton(5L, 77L, status, null, null);

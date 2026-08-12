@@ -73,6 +73,30 @@ class BlockAndChapterTest {
             assertThat(BlockIds.sequenceOf("b12")).isEqualTo(12);
             assertThatThrownBy(() -> BlockIds.sequenceOf("nope")).isInstanceOf(IllegalArgumentException.class);
         }
+
+        /**
+         * 공용 본문과 개인화 보충 블록의 ID 공간이 갈려 있어야 한다. 같은 공간을 쓰면 어떤 사용자의
+         * 보충 블록에 붙은 신호가 공용 블록 신호와 섞이고, 그 오염은 에러 없이 집계를 틀리게 한다.
+         */
+        @Test
+        @DisplayName("보충 블록 ID 는 다른 공간이다")
+        void supplementIdsAreSeparateSpace() {
+            assertThat(BlockIds.ofSupplement(3)).isEqualTo("s3");
+            assertThat(BlockIds.isValid("s3")).isTrue();
+            assertThat(BlockIds.isSupplement("s3")).isTrue();
+            assertThat(BlockIds.isBody("s3")).isFalse();
+            assertThat(BlockIds.isSupplement("b3")).isFalse();
+            assertThat(BlockIds.isBody("b3")).isTrue();
+            assertThat(BlockIds.sequenceOf("s3")).isEqualTo(3);
+            assertThatThrownBy(() -> BlockIds.ofSupplement(0)).isInstanceOf(IllegalArgumentException.class);
+        }
+
+        /** 보충 블록도 블록이므로 만들 수는 있다 — 공용 문서에 들어가는 것만 막는다. */
+        @Test
+        @DisplayName("보충 ID 로 블록을 만들 수 있다")
+        void supplementBlockIsAValidBlock() {
+            assertThat(Block.text("s1", BlockType.PARAGRAPH, "추가 설명").id()).isEqualTo("s1");
+        }
     }
 
     @Nested

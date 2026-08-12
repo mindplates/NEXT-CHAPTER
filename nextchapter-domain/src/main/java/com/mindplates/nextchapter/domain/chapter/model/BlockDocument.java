@@ -23,6 +23,11 @@ public record BlockDocument(List<Block> blocks) {
             if (!seen.add(block.id())) {
                 throw new IllegalArgumentException("블록 ID 가 중복됩니다: " + block.id());
             }
+            // 공용 문서에 보충 블록 ID 가 들어오면 개인화 신호가 공용 블록 신호에 섞인다.
+            // 그 오염은 에러 없이 집계를 틀리게 하므로 저장 경로에서 막는다.
+            if (!BlockIds.isBody(block.id())) {
+                throw new IllegalArgumentException("공용 블록 문서에는 본문 ID 만 올 수 있습니다: " + block.id());
+            }
         }
         blocks = List.copyOf(blocks);
     }
@@ -54,9 +59,17 @@ public record BlockDocument(List<Block> blocks) {
      * 겹쳐 볼 수 있고, 소스가 하나여야 여러 형태로 뻗을 수 있다.
      */
     public List<Block> webBlocks() {
-        return blocks.stream()
-                .filter(block -> !block.type().isDeliverySpecific())
-                .toList();
+        return blocksFor(DeliveryFormat.WEB);
+    }
+
+    /**
+     * 그 형태의 렌더러가 쓰는 블록.
+     *
+     * <p>형태별로 문서를 나누지 않고 <b>같은 문서를 걸러 보는</b> 이유가 여기 있다 — 소스가 하나여야 여러
+     * 사람의 반응을 겹쳐 볼 수 있고, 소스가 하나여야 여러 형태로 뻗을 수 있다.
+     */
+    public List<Block> blocksFor(DeliveryFormat format) {
+        return blocks.stream().filter(block -> format.includes(block.type())).toList();
     }
 
     /** 음성·자막의 원천. 영상 렌더러가 쓴다. */

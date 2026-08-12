@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 예외 → HTTP 응답 매핑을 한 곳에 모은다.
@@ -68,6 +69,22 @@ public class GlobalExceptionHandler {
                 .map(error -> new ApiResponse.FieldError(error.getField(), error.getDefaultMessage()))
                 .toList();
         return ResponseEntity.badRequest().body(ApiResponse.error("입력값이 올바르지 않습니다.", errors));
+    }
+
+    /**
+     * 경로 변수·쿼리 파라미터의 타입이 맞지 않는 경우 — 400 이다.
+     *
+     * <p>이 핸들러가 없으면 잘못된 입력이 마지막 핸들러로 떨어져 <b>500</b> 이 된다. 없는 enum 값
+     * ({@code ?format=HOLOGRAM}) 이나 숫자가 아닌 ID 가 서버 오류로 보이면, 운영자는 고칠 것이 없는
+     * 알림을 계속 받고 진짜 오류가 그 사이에 묻힌다.
+     *
+     * <p>예외 메시지를 그대로 내보내지 않는다. 거기에는 대상 Java 타입 이름이 들어 있다.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(
+                        "요청 값이 올바르지 않습니다.", List.of(new ApiResponse.FieldError(e.getName(), "허용되지 않은 값입니다."))));
     }
 
     @ExceptionHandler(InfrastructureException.class)

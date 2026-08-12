@@ -29,20 +29,49 @@ import java.util.regex.Pattern;
  */
 public final class BlockIds {
 
-    private static final Pattern PATTERN = Pattern.compile("b(\\d+)");
+    /**
+     * 공용 본문 블록과 개인화 보충 블록의 <b>ID 공간을 나눈다.</b>
+     *
+     * <p>같은 공간을 쓰면 어떤 사용자의 보충 블록 {@code b7} 에 붙은 신호가 공용 본문의 {@code b7} 신호와
+     * 섞인다. 집단 루프는 <i>같은 본문에 대한 반응</i>을 겹쳐 보는 것으로 성립하므로, 그 오염은 임계치
+     * 판정과 수정 전후 비교를 동시에 무너뜨린다 — 그리고 에러 없이 일어난다.
+     */
+    private static final Pattern PATTERN = Pattern.compile("([bs])(\\d+)");
+
+    private static final String BODY_PREFIX = "b";
+
+    private static final String SUPPLEMENT_PREFIX = "s";
 
     private BlockIds() {}
 
-    /** 카운터 값에 대응하는 ID. */
+    /** 카운터 값에 대응하는 본문 블록 ID. */
     public static String of(int sequence) {
-        if (sequence < 1) {
-            throw new IllegalArgumentException("블록 ID 순번은 1 이상이어야 합니다: " + sequence);
-        }
-        return "b" + sequence;
+        return prefixed(BODY_PREFIX, sequence);
+    }
+
+    /** 보충 블록 ID. 공용 본문과 다른 공간이라 신호가 섞이지 않는다. */
+    public static String ofSupplement(int sequence) {
+        return prefixed(SUPPLEMENT_PREFIX, sequence);
     }
 
     public static boolean isValid(String blockId) {
         return blockId != null && PATTERN.matcher(blockId).matches();
+    }
+
+    /** 공용 본문 블록 ID 인지. 블록 문서(공용)는 이것만 담는다. */
+    public static boolean isBody(String blockId) {
+        return isValid(blockId) && blockId.startsWith(BODY_PREFIX);
+    }
+
+    public static boolean isSupplement(String blockId) {
+        return isValid(blockId) && blockId.startsWith(SUPPLEMENT_PREFIX);
+    }
+
+    private static String prefixed(String prefix, int sequence) {
+        if (sequence < 1) {
+            throw new IllegalArgumentException("블록 ID 순번은 1 이상이어야 합니다: " + sequence);
+        }
+        return prefix + sequence;
     }
 
     /**
@@ -54,6 +83,7 @@ public final class BlockIds {
         if (!matcher.matches()) {
             throw new IllegalArgumentException("블록 ID 형식이 아닙니다: " + blockId);
         }
-        return Integer.parseInt(matcher.group(1));
+        // group(1) 은 접두사(b/s)이고 순번은 group(2) 다.
+        return Integer.parseInt(matcher.group(2));
     }
 }
