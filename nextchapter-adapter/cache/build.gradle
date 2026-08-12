@@ -6,4 +6,11 @@ dependencies {
     implementation project(':nextchapter-application')
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // 여기서 틀릴 수 있는 것은 Java 코드가 아니라 Redis 명령의 의미다 — INCR 의 반환값, TTL 을 언제
+    // 거는가, 창 키가 실제로 넘어가는가. StringRedisTemplate 을 목으로 바꾸면 그 셋이 정확히
+    // 테스트에서 빠지고, 통과하는 테스트가 한도를 지키지 않는 구현을 덮는다.
+    //
+    // 전용 모듈 대신 GenericContainer 를 쓴다. Redis 는 포트 하나만 열면 되므로 모듈이 주는 편의가
+    // 없고, 모듈 아티팩트 이름은 Testcontainers 메이저 버전마다 바뀐다.
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
 }

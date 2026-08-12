@@ -5,6 +5,7 @@ import com.mindplates.nextchapter.common.exception.BusinessException;
 import com.mindplates.nextchapter.common.exception.DuplicateException;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.common.exception.InfrastructureException;
+import com.mindplates.nextchapter.common.exception.RateLimitExceededException;
 import com.mindplates.nextchapter.common.response.ApiResponse;
 import java.util.List;
 import org.slf4j.Logger;
@@ -40,6 +41,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicate(DuplicateException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+    }
+
+    /**
+     * 429. 400 과 나누는 이유는 클라이언트의 대응이 다르기 때문이다 — 입력을 고칠 문제가 아니라 기다릴
+     * 문제다. 같은 코드로 접으면 클라이언트가 즉시 재시도해 한도를 계속 소진시킨다.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimit(RateLimitExceededException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(BusinessException.class)
