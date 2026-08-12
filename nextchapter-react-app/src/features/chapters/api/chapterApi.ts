@@ -83,3 +83,19 @@ export interface RecordSignalRequest {
 export function recordSignal(chapterId: number, request: RecordSignalRequest): Promise<unknown> {
   return postJson(`/api/chapters/${chapterId}/signals`, request)
 }
+
+export interface Supplement {
+  readonly anchorBlockId: string
+  readonly block: Block
+  readonly reused: boolean
+}
+
+/**
+ * 막힌 지점에 보충 설명을 요청한다.
+ *
+ * 같은 지점을 다시 요청하면 서버가 **이미 만든 것을 돌려준다** — 그래서 버튼을 여러 번 눌러도 비용이
+ * 늘지 않는다. 새로 만들었는지는 `reused` 로 알 수 있다.
+ */
+export function requestSupplement(chapterId: number, blockId: string): Promise<Supplement> {
+  return postJson<Supplement>(`/api/chapters/${chapterId}/blocks/${blockId}/supplement`)
+}

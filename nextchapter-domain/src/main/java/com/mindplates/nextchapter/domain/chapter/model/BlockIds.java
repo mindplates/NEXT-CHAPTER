@@ -49,8 +49,13 @@ public final class BlockIds {
         return prefixed(BODY_PREFIX, sequence);
     }
 
-    /** 보충 블록 ID. 공용 본문과 다른 공간이라 신호가 섞이지 않는다. */
-    public static String ofSupplement(int sequence) {
+    /**
+     * 보충 블록 ID. 공용 본문과 다른 공간이라 신호가 섞이지 않는다.
+     *
+     * <p>{@code long} 을 받는 이유는 발급자가 <b>테이블의 PK</b> 이기 때문이다. 순번을 계산해 발급하면 지운
+     * 뒤 다시 만들 때 지워진 ID 가 되살아나고, 그러면 두 설명의 신호가 한 블록에 섞인다.
+     */
+    public static String ofSupplement(long sequence) {
         return prefixed(SUPPLEMENT_PREFIX, sequence);
     }
 
@@ -67,7 +72,7 @@ public final class BlockIds {
         return isValid(blockId) && blockId.startsWith(SUPPLEMENT_PREFIX);
     }
 
-    private static String prefixed(String prefix, int sequence) {
+    private static String prefixed(String prefix, long sequence) {
         if (sequence < 1) {
             throw new IllegalArgumentException("블록 ID 순번은 1 이상이어야 합니다: " + sequence);
         }

@@ -16,6 +16,7 @@ import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
 import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
+import com.mindplates.nextchapter.application.layer.port.out.LoadSupplementBlockPort;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
@@ -61,6 +62,9 @@ class ChapterCompositionServiceTest {
     @Mock
     ChapterDocumentCachePort chapterDocumentCachePort;
 
+    @Mock
+    LoadSupplementBlockPort loadSupplementBlockPort;
+
     ChapterCompositionService service;
 
     @BeforeEach
@@ -68,7 +72,8 @@ class ChapterCompositionServiceTest {
         service = new ChapterCompositionService(
                 new PublishedSkeletonGuard(loadSkeletonPort),
                 loadChapterPort,
-                new SharedChapterDocuments(loadChapterVersionPort, chapterDocumentCachePort));
+                new SharedChapterDocuments(loadChapterVersionPort, chapterDocumentCachePort),
+                loadSupplementBlockPort);
     }
 
     private static Chapter chapter() {
@@ -144,7 +149,7 @@ class ChapterCompositionServiceTest {
         assertThat(view.versionCreatedAt()).isEqualTo(LocalDateTime.of(2026, 8, 12, 9, 0));
     }
 
-    /** M3 시점 레이어는 비어 있다. 그 사실이 응답에 드러나야 캐시 경계(P4.5)를 코드로 나눌 수 있다. */
+    /** 개인화 여부가 응답에 드러나야 캐시 경계(P4.5)를 코드로 나눌 수 있다. */
     @Test
     @DisplayName("레이어가 비면 개인화되지 않았다고 표시한다")
     void reportsNotPersonalizedWhenLayerEmpty() {
@@ -152,6 +157,39 @@ class ChapterCompositionServiceTest {
 
         assertThat(service.compose(42L, 100L, DeliveryFormat.WEB).personalized())
                 .isFalse();
+    }
+
+    /**
+     * <b>본문 블록이 바뀌지 않는다</b>(M4 완료 기준 2번). 보충 블록은 앵커 뒤에 끼워지고, 앞뒤의 본문 블록은
+     * 내용도 순서도 그대로다 — 본문이 사용자마다 달라지는 순간 집단 루프가 작동을 멈춘다.
+     */
+    @Test
+    @DisplayName("보충 블록이 앵커 뒤에 끼워지고 본문은 그대로다")
+    void insertsSupplementAfterAnchor() {
+        stubPublished();
+        when(loadSupplementBlockPort.findByUserAndChapter(42L, 100L))
+                .thenReturn(List.of(new com.mindplates.nextchapter.domain.layer.model.SupplementBlock(
+                        "b2", Block.text("s1", BlockType.PARAGRAPH, "예를 들어"))));
+
+        ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        assertThat(view.blocks()).extracting(BlockView::id).containsExactly("b1", "b2", "s1", "b4");
+        assertThat(view.personalized()).isTrue();
+        assertThat(view.blocks())
+                .filteredOn(block -> block.id().startsWith("b"))
+                .extracting(BlockView::text)
+                .containsExactly("경사하강법이란", "손실함수를", null);
+    }
+
+    /** 다른 사용자의 보충 블록이 섞이면 개인화가 아니라 유출이다. */
+    @Test
+    @DisplayName("레이어는 그 사용자의 것만 읽는다")
+    void loadsOwnLayerOnly() {
+        stubPublished();
+
+        service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        verify(loadSupplementBlockPort).findByUserAndChapter(42L, 100L);
     }
 
     @Test

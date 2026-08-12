@@ -5,6 +5,7 @@ import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCa
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
+import com.mindplates.nextchapter.application.layer.port.out.LoadSupplementBlockPort;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.domain.chapter.model.Block;
@@ -36,9 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       공유되는 것이 없어 캐시의 의미가 사라진다
  * </ol>
  *
- * <p>레이어를 <b>적재하지 않고 빈 레이어를 쓴다.</b> 레이어 저장은 M4 P4.1 이고, 그때 이 자리에 적재
- * 포트가 들어온다. 경계를 지금 그어 두는 이유는, 나중에 그으려면 이미 "본문을 그대로 내리는" 코드가
- * 호출부마다 퍼져 있기 때문이다. 합성 규칙 자체는 {@link LayerComposition} 에 있고 이미 검증된다.
+ * <p>레이어에는 <b>보충 블록만</b> 들어간다(M4 P4.3). 이해도는 합성에 쓰이지 않는다 — 그것은 경로 결정과
+ * 퀴즈 난이도가 보는 값이고, 본문 구성을 바꾸지 않는다. 합성 규칙 자체는 {@link LayerComposition} 에 있다.
  */
 @Service
 @RequiredArgsConstructor
@@ -48,6 +48,7 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
     private final PublishedSkeletonGuard publishedSkeletonGuard;
     private final LoadChapterPort loadChapterPort;
     private final SharedChapterDocuments sharedChapterDocuments;
+    private final LoadSupplementBlockPort loadSupplementBlockPort;
 
     @Override
     public ComposedChapterView compose(Long userId, Long chapterId, DeliveryFormat format) {
@@ -57,7 +58,9 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
         publishedSkeletonGuard.requireById(chapter.skeletonId());
 
         CachedChapterDocument document = sharedChapterDocuments.current(chapter, resolved);
-        ChapterLayer layer = ChapterLayer.empty(userId, chapterId);
+        // 레이어 적재 지점. 캐시 조회 **뒤에** 온다 — 개인화 결과는 공용 키에 들어갈 수 없다.
+        ChapterLayer layer =
+                new ChapterLayer(userId, chapterId, loadSupplementBlockPort.findByUserAndChapter(userId, chapterId));
 
         return new ComposedChapterView(
                 chapter.id(),

@@ -13,10 +13,15 @@ export function BlockSignalTools({
   blockId,
   onQuestion,
   onErrorReport,
+  onSupplement,
+  supplementPending,
 }: {
   readonly blockId: string
   readonly onQuestion: (blockId: string, text: string) => void
   readonly onErrorReport: (blockId: string, text: string) => void
+  /** 보충 설명 요청. 앵커가 본문 블록일 때만 붙는다 — 보충 블록에 보충을 붙이면 순서가 정의되지 않는다. */
+  readonly onSupplement?: (blockId: string) => void
+  readonly supplementPending?: boolean
 }) {
   const [mode, setMode] = useState<'idle' | 'question' | 'error'>('idle')
   const [text, setText] = useState('')
@@ -30,6 +35,16 @@ export function BlockSignalTools({
         <button className="button button--tiny" onClick={() => setMode('error')} aria-label="이 지점의 오류 신고">
           오류
         </button>
+        {onSupplement && (
+          <button
+            className="button button--tiny"
+            disabled={supplementPending}
+            onClick={() => onSupplement(blockId)}
+            aria-label="이 지점의 추가 설명 요청"
+          >
+            {supplementPending ? '생성 중…' : '더 설명'}
+          </button>
+        )}
       </div>
     )
   }

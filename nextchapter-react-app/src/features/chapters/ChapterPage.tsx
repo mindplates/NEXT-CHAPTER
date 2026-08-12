@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { HttpError } from '../../shared/api/httpClient'
-import { fetchChapter } from './api/chapterApi'
+import { fetchChapter, requestSupplement } from './api/chapterApi'
 import { BlockRenderer } from './blocks/BlockRenderer'
 import { BlockSignalTools } from './blocks/BlockSignalTools'
 import { useChapterSignals } from './hooks/useChapterSignals'
@@ -25,6 +25,16 @@ export function ChapterPage() {
   })
 
   const signals = useChapterSignals(data)
+  const queryClient = useQueryClient()
+
+  /**
+   * 보충 설명 요청. 성공하면 챕터를 다시 읽는다 — 합성 결과에 보충 블록이 이미 끼워져 오므로,
+   * 응답으로 받은 블록을 화면에 따로 꽂지 않는다. 두 경로로 그리면 새로고침 후 위치가 달라질 수 있다.
+   */
+  const supplement = useMutation({
+    mutationFn: (blockId: string) => requestSupplement(id, blockId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chapters', id] }),
+  })
 
   // 열었다는 사실 자체가 신호다. 챕터가 바뀔 때 한 번만 보낸다 — 렌더마다 보내면 진행률이 부풀려진다.
   const openedRef = useRef<number | null>(null)
@@ -78,13 +88,15 @@ export function ChapterPage() {
             blockId={block.id}
             onQuestion={signals.askQuestion}
             onErrorReport={signals.reportError}
+            // 보충 블록에는 보충을 붙이지 않는다. 서버도 거절하지만 버튼을 보여 주지 않는 편이 낫다.
+            onSupplement={block.id.startsWith('b') ? supplement.mutate : undefined}
+            supplementPending={supplement.isPending && supplement.variables === block.id}
           />
         </BlockRenderer>
       ))}
 
-      {signals.isFailed && (
-        <p role="alert">기록을 보내지 못했습니다 — {signals.error?.message}</p>
-      )}
+      {signals.isFailed && <p role="alert">기록을 보내지 못했습니다 — {signals.error?.message}</p>}
+      {supplement.isError && <p role="alert">보충 설명을 만들지 못했습니다 — {supplement.error.message}</p>}
 
       <footer className="chapter__footer">
         <button className="button" onClick={() => signals.reportProgress(100)}>

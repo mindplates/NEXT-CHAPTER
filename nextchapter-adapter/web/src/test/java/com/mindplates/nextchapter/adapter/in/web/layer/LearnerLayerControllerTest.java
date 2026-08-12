@@ -3,15 +3,20 @@ package com.mindplates.nextchapter.adapter.in.web.layer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mindplates.nextchapter.adapter.in.web.support.GlobalExceptionHandler;
+import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.layer.port.in.GetChapterLayerUseCase;
 import com.mindplates.nextchapter.application.layer.port.in.RecommendNextChapterUseCase;
+import com.mindplates.nextchapter.application.layer.port.in.RequestSupplementUseCase;
 import com.mindplates.nextchapter.application.layer.view.ChapterUnderstandingView;
 import com.mindplates.nextchapter.application.layer.view.NextChapterView;
 import com.mindplates.nextchapter.application.layer.view.SkeletonLayerView;
+import com.mindplates.nextchapter.application.layer.view.SupplementView;
+import com.mindplates.nextchapter.domain.chapter.model.BlockType;
 import com.mindplates.nextchapter.domain.layer.model.RecommendationReason;
 import com.mindplates.nextchapter.domain.layer.model.UnderstandingLevel;
 import java.security.Principal;
@@ -37,6 +42,9 @@ class LearnerLayerControllerTest {
 
     @MockitoBean
     RecommendNextChapterUseCase recommendNextChapterUseCase;
+
+    @MockitoBean
+    RequestSupplementUseCase requestSupplementUseCase;
 
     private static ChapterUnderstandingView chapter(Long id, UnderstandingLevel level) {
         return new ChapterUnderstandingView(id, "a", "가", 4, 1, 2, 60, level, false, null);
@@ -93,6 +101,26 @@ class LearnerLayerControllerTest {
                 .andExpect(jsonPath("$.data.currentLevel").value("STRUGGLING"))
                 .andExpect(jsonPath("$.data.candidates[0].chapterId").value(10))
                 .andExpect(jsonPath("$.data.candidates[0].reason").value("PREREQUISITE_GAP"));
+    }
+
+    /** 새로 만든 것과 이미 있던 것을 상태 코드로 구분한다 — 그 차이가 비용 방어선이 동작하는지의 확인이다. */
+    @Test
+    @DisplayName("보충 블록을 새로 만들면 201, 이미 있으면 200 이다")
+    void supplementStatus() throws Exception {
+        BlockView block = BlockView.forLearner(
+                com.mindplates.nextchapter.domain.chapter.model.Block.text("s1", BlockType.PARAGRAPH, "예를 들어"));
+        when(requestSupplementUseCase.request(42L, 100L, "b2")).thenReturn(new SupplementView("b2", block, false));
+
+        mockMvc.perform(post("/api/chapters/100/blocks/b2/supplement").principal(principal("42")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.anchorBlockId").value("b2"))
+                .andExpect(jsonPath("$.data.block.id").value("s1"));
+
+        when(requestSupplementUseCase.request(42L, 100L, "b2")).thenReturn(new SupplementView("b2", block, true));
+
+        mockMvc.perform(post("/api/chapters/100/blocks/b2/supplement").principal(principal("42")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reused").value(true));
     }
 
     @Test
