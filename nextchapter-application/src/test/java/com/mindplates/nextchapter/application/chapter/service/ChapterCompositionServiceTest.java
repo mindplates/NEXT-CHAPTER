@@ -199,6 +199,75 @@ class ChapterCompositionServiceTest {
         verify(loadSupplementBlockPort).findByUserAndChapter(42L, 100L);
     }
 
+    /**
+     * <b>캐시 경계</b>(P4.5) — 캐시에 들어가는 것은 <b>개인화되지 않은</b> 문서다.
+     *
+     * <p>보충 블록이나 난이도로 걸러진 목록이 공용 키에 들어가면 다른 사용자가 남의 개인화 결과를 받는다.
+     * 그 순간 캐시가 유출 경로가 되고, 그건 에러 없이 일어난다 — 키에 사용자가 없으므로 아무도 알 수 없다.
+     */
+    @Test
+    @DisplayName("캐시에는 보충 블록이 들어가지 않는다")
+    void cacheHoldsSharedDocumentOnly() {
+        stubPublished();
+        when(loadSupplementBlockPort.findByUserAndChapter(42L, 100L))
+                .thenReturn(List.of(new com.mindplates.nextchapter.domain.layer.model.SupplementBlock(
+                        "b2", Block.text("s1", BlockType.PARAGRAPH, "내 설명"))));
+
+        ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        assertThat(view.personalized()).isTrue();
+        assertThat(view.blocks()).extracting(BlockView::id).contains("s1");
+
+        ArgumentCaptor<CachedChapterDocument> cached = ArgumentCaptor.forClass(CachedChapterDocument.class);
+        verify(chapterDocumentCachePort).put(cached.capture());
+        assertThat(cached.getValue().blocks()).extracting(Block::id).containsExactly("b1", "b2", "b4");
+    }
+
+    /**
+     * 난이도 선택도 캐시 뒤에 온다. 걸러진 목록을 캐시에 넣으면 그 뒤에 오는 다른 이해도의 사용자가 문항이
+     * 빠진 챕터를 받는다.
+     */
+    @Test
+    @DisplayName("캐시에는 난이도로 걸러지지 않은 문항 전부가 들어간다")
+    void cacheKeepsAllQuizzes() {
+        when(loadSkeletonPort.findById(5L))
+                .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
+        when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(loadChapterUnderstandingPort.findByChapter(42L, 100L))
+                .thenReturn(com.mindplates.nextchapter.domain.layer.model.ChapterUnderstanding.none(100L));
+        when(chapterDocumentCachePort.find(eq(100L), eq(2), any())).thenReturn(Optional.empty());
+        when(loadChapterVersionPort.find(100L, 2))
+                .thenReturn(Optional.of(new ChapterVersion(
+                        1L,
+                        100L,
+                        2,
+                        BlockDocument.of(
+                                Block.text("b1", BlockType.PARAGRAPH, "본문"),
+                                new Block(
+                                        "b2",
+                                        BlockType.QUIZ,
+                                        null,
+                                        java.util.Map.of(
+                                                "question", "쉬운 문항",
+                                                "choices", List.of("가", "나"),
+                                                "answer", "가",
+                                                "difficulty", "HARD"))),
+                        null,
+                        ChapterVersionSource.GENERATED,
+                        "pipeline",
+                        null)));
+
+        ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        // 이해도를 모르는 사용자에게는 어려운 문항이 보이지 않는다.
+        assertThat(view.blocks()).extracting(BlockView::id).containsExactly("b1");
+
+        ArgumentCaptor<CachedChapterDocument> cached = ArgumentCaptor.forClass(CachedChapterDocument.class);
+        verify(chapterDocumentCachePort).put(cached.capture());
+        // 캐시에는 남아 있어야 한다 — 다른 이해도의 사용자가 같은 키로 이 문서를 받는다.
+        assertThat(cached.getValue().blocks()).extracting(Block::id).containsExactly("b1", "b2");
+    }
+
     @Test
     @DisplayName("공개되지 않은 뼈대의 챕터는 404 다 — 본문을 읽지도 않는다")
     void hidesUnpublished() {
