@@ -13,6 +13,10 @@ dependencies {
     // oauth2ResourceServer DSL 을 쓰면 서명·만료·클레임 검증이 프레임워크 쪽에 남는다 —
     // 직접 만든 필터는 "만료를 확인하는 줄을 빠뜨려도 통과하는" 실패 방식을 갖는다.
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    // 소셜 제공자의 토큰 교환·프로필 조회를 RestClient 로 직접 한다. Spring Security 의
+    // oauth2Login 을 쓰지 않는 이유는 그것이 세션·리다이렉트 흐름을 전제하기 때문이다 —
+    // 클라이언트가 별도 SPA·앱이고 자격 증명이 무상태 Bearer 토큰인 구조와 맞지 않는다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-security-test'
     // 필터 체인은 서블릿 컨텍스트가 있어야 검증된다. "관리 경로가 실제로 잠겨 있는지"는

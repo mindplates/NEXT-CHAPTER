@@ -47,7 +47,7 @@ class AdminJwtTokenIssuerTest {
     @DisplayName("roles 클레임이 ROLE_ 접두사가 붙은 권한으로 변환된다")
     void rolesBecomeGrantedAuthorities() {
         Jwt decoded = decoder(SECRET).decode(issuer(SECRET).issue(account()).accessToken());
-        JwtAuthenticationConverter converter = config.adminJwtAuthenticationConverter();
+        JwtAuthenticationConverter converter = config.rolesJwtAuthenticationConverter();
 
         var authentication = converter.convert(decoded);
 
@@ -59,7 +59,7 @@ class AdminJwtTokenIssuerTest {
     @Test
     @DisplayName("만료 시각이 설정된 TTL 을 따른다")
     void expiryFollowsTtl() {
-        JwtProperties properties = new JwtProperties(SECRET, Duration.ofMinutes(30), "nextchapter");
+        JwtProperties properties = new JwtProperties(SECRET, Duration.ofMinutes(30), null, "nextchapter");
 
         AdminTokenView token = new AdminJwtTokenIssuer(config.jwtEncoder(key(SECRET)), properties).issue(account());
 
@@ -95,15 +95,16 @@ class AdminJwtTokenIssuerTest {
     @Test
     @DisplayName("TTL·issuer 를 주지 않으면 기본값이 채워진다")
     void propertiesFillDefaults() {
-        JwtProperties properties = new JwtProperties(SECRET, null, "  ");
+        JwtProperties properties = new JwtProperties(SECRET, null, null, "  ");
 
         assertThat(properties.ttl()).isEqualTo(Duration.ofHours(8));
+        assertThat(properties.userTtl()).isEqualTo(Duration.ofDays(7));
         assertThat(properties.issuer()).isEqualTo("nextchapter");
     }
 
     private AdminJwtTokenIssuer issuer(String secret) {
         return new AdminJwtTokenIssuer(
-                config.jwtEncoder(key(secret)), new JwtProperties(secret, Duration.ofHours(1), "nextchapter"));
+                config.jwtEncoder(key(secret)), new JwtProperties(secret, Duration.ofHours(1), null, "nextchapter"));
     }
 
     private JwtDecoder decoder(String secret) {
@@ -111,7 +112,7 @@ class AdminJwtTokenIssuerTest {
     }
 
     private SecretKey key(String secret) {
-        return config.jwtSecretKey(new JwtProperties(secret, Duration.ofHours(1), "nextchapter"));
+        return config.jwtSecretKey(new JwtProperties(secret, Duration.ofHours(1), null, "nextchapter"));
     }
 
     private static AdminAccount account() {
