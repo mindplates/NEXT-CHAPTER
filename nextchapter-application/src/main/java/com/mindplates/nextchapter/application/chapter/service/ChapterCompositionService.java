@@ -1,17 +1,14 @@
 package com.mindplates.nextchapter.application.chapter.service;
 
 import com.mindplates.nextchapter.application.chapter.port.in.ComposeChapterUseCase;
-import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort;
 import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort.CachedChapterDocument;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
-import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.domain.chapter.model.Block;
 import com.mindplates.nextchapter.domain.chapter.model.BlockDocument;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
-import com.mindplates.nextchapter.domain.chapter.model.ChapterVersion;
 import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
 import com.mindplates.nextchapter.domain.layer.model.ChapterLayer;
 import com.mindplates.nextchapter.domain.layer.model.LayerComposition;
@@ -32,7 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>경계가 둘로 나뉘어 있다.
  *
  * <ol>
- *   <li><b>공용 문서</b> — 캐시 대상. 키에 버전과 형태가 들어가므로 무효화 코드가 없다
+ *   <li><b>공용 문서</b> — {@link SharedChapterDocuments} 가 읽고 캐시한다. 키에 버전과 형태가 들어가므로
+ *       무효화 코드가 없다
  *   <li><b>합성 결과</b> — 캐시 대상이 아니다. 사용자마다 다르므로 키에 사용자가 들어가야 하고, 그러면
  *       공유되는 것이 없어 캐시의 의미가 사라진다
  * </ol>
@@ -48,8 +46,7 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
 
     private final PublishedSkeletonGuard publishedSkeletonGuard;
     private final LoadChapterPort loadChapterPort;
-    private final LoadChapterVersionPort loadChapterVersionPort;
-    private final ChapterDocumentCachePort chapterDocumentCachePort;
+    private final SharedChapterDocuments sharedChapterDocuments;
 
     @Override
     public ComposedChapterView compose(Long userId, Long chapterId, DeliveryFormat format) {
@@ -58,7 +55,7 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
                 loadChapterPort.findById(chapterId).orElseThrow(() -> new EntityNotFoundException("챕터", chapterId));
         publishedSkeletonGuard.requireById(chapter.skeletonId());
 
-        CachedChapterDocument document = sharedDocument(chapter, resolved);
+        CachedChapterDocument document = sharedChapterDocuments.current(chapter, resolved);
         ChapterLayer layer = ChapterLayer.empty(userId, chapterId);
 
         return new ComposedChapterView(
@@ -73,41 +70,6 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
                 document.improvedFromPrevious(),
                 document.changeSummary(),
                 document.versionCreatedAt());
-    }
-
-    /**
-     * 공용 문서. 캐시에 있으면 그것을 쓰고, 없으면 원천에서 읽어 채운다.
-     *
-     * <p>버전을 <b>챕터 행에서</b> 가져와 키를 만든다. 그래서 캐시 히트일 때 본문 스냅샷(JSONB)을 읽지
-     * 않는다 — 그것이 이 조회에서 가장 비싼 부분이다. 챕터 행과 버전 스냅샷은 같은 트랜잭션에서 쓰이므로
-     * 두 값이 어긋나지 않는다.
-     */
-    private CachedChapterDocument sharedDocument(Chapter chapter, DeliveryFormat format) {
-        if (!chapter.hasBody()) {
-            // published 전환 조건이 "전 챕터 완료"이므로 본문 없는 published 챕터는 정상 상태가 아니다.
-            // 빈 블록 목록으로 내리면 그 불일치가 "내용 없는 챕터"로 보인다.
-            throw new EntityNotFoundException("챕터 본문", chapter.id());
-        }
-        int version = chapter.currentVersion();
-        return chapterDocumentCachePort
-                .find(chapter.id(), version, format)
-                .orElseGet(() -> cache(chapter, version, format));
-    }
-
-    private CachedChapterDocument cache(Chapter chapter, int version, DeliveryFormat format) {
-        ChapterVersion snapshot = loadChapterVersionPort
-                .find(chapter.id(), version)
-                .orElseThrow(() -> new EntityNotFoundException("챕터 본문", chapter.id()));
-        CachedChapterDocument document = new CachedChapterDocument(
-                chapter.id(),
-                version,
-                format,
-                snapshot.body().blocksFor(format),
-                snapshot.isRevision(),
-                snapshot.changeSummary(),
-                snapshot.createdAt());
-        chapterDocumentCachePort.put(document);
-        return document;
     }
 
     /**

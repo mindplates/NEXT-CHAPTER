@@ -47,6 +47,7 @@ import org.testcontainers.kafka.ConfluentKafkaContainer;
         properties = {
             "nextchapter.kafka.prefix=it-",
             "nextchapter.kafka.outbox.prefix=it-",
+            "nextchapter.kafka.signal.prefix=it-",
             "nextchapter.kafka.body-partitions=6",
             "spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer",
             "spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer",
@@ -79,6 +80,12 @@ class GenerationEventKafkaPublisherIT {
 
     @Autowired
     com.mindplates.nextchapter.adapter.out.messaging.outbox.OutboxTopicProperties outboxTopics;
+
+    @Autowired
+    com.mindplates.nextchapter.adapter.out.messaging.signal.SignalKafkaPublisher signalPublisher;
+
+    @Autowired
+    com.mindplates.nextchapter.adapter.out.messaging.signal.SignalTopicProperties signalTopics;
 
     /**
      * 리스너가 같은 모듈에 있어 컴포넌트 스캔에 걸린다. 유스케이스 구현은 application 모듈이라 이
@@ -185,6 +192,55 @@ class GenerationEventKafkaPublisherIT {
                         .lastHeader(OutboxKafkaPublisher.IDEMPOTENCY_KEY_HEADER)
                         .value()))
                 .isEqualTo("chapter:100:v2");
+    }
+
+    /**
+     * 신호 토픽의 키는 <b>챕터 ID</b> 다. 집계 축이 "같은 챕터·같은 블록에 몇 건"이므로 챕터 단위 순서면
+     * 충분하고, 뼈대 ID 를 쓰면 인기 있는 뼈대 하나가 파티션에 몰려 그 뼈대의 집계만 밀린다.
+     */
+    @Test
+    @DisplayName("신호는 챕터 ID 를 키로, 종류를 헤더로 발행된다")
+    void signalKeyedByChapter() {
+        signalPublisher.publish(new com.mindplates.nextchapter.domain.signal.model.Signal(
+                9L,
+                42L,
+                100L,
+                2,
+                "b6",
+                com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat.WEB,
+                com.mindplates.nextchapter.domain.signal.model.SignalType.QUIZ_ANSWER,
+                Map.of("correct", false),
+                java.time.LocalDateTime.of(2026, 8, 12, 9, 0),
+                null));
+
+        ConsumerRecord<String, String> record = readOne(signalTopics.recorded());
+        assertThat(record.key()).isEqualTo("100");
+        assertThat(new String(record.headers()
+                        .lastHeader(
+                                com.mindplates.nextchapter.adapter.out.messaging.signal.SignalKafkaPublisher
+                                        .SIGNAL_TYPE_HEADER)
+                        .value()))
+                .isEqualTo("QUIZ_ANSWER");
+        JsonNode wire = payload(record);
+        assertThat(wire.path("chapterVersion").asInt()).isEqualTo(2);
+        assertThat(wire.path("blockId").asText()).isEqualTo("b6");
+        assertThat(wire.path("format").asText()).isEqualTo("WEB");
+        assertThat(wire.path("payload").path("correct").asBoolean()).isFalse();
+        // 개인화 블록에 붙은 신호를 집계에서 구분할 수 있어야 한다.
+        assertThat(wire.path("supplementBlock").asBoolean()).isFalse();
+    }
+
+    @Test
+    @DisplayName("신호 토픽도 선언한 파티션 수로 만들어진다")
+    void signalTopicPartitions() throws Exception {
+        try (AdminClient admin =
+                AdminClient.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers()))) {
+            var described = admin.describeTopics(List.of(signalTopics.recorded()))
+                    .allTopicNames()
+                    .get();
+
+            assertThat(described.get(signalTopics.recorded()).partitions()).hasSize(6);
+        }
     }
 
     @Test

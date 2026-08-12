@@ -67,8 +67,7 @@ class ChapterCompositionServiceTest {
         service = new ChapterCompositionService(
                 new PublishedSkeletonGuard(loadSkeletonPort),
                 loadChapterPort,
-                loadChapterVersionPort,
-                chapterDocumentCachePort);
+                new SharedChapterDocuments(loadChapterVersionPort, chapterDocumentCachePort));
     }
 
     private static Chapter chapter() {

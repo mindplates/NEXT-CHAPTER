@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -80,6 +81,21 @@ public class GlobalExceptionHandler {
      *
      * <p>예외 메시지를 그대로 내보내지 않는다. 거기에는 대상 Java 타입 이름이 들어 있다.
      */
+    /**
+     * 본문을 읽을 수 없는 요청 — 400 이다.
+     *
+     * <p>없는 enum 값이나 깨진 JSON 이 이 경로로 온다. 핸들러가 없으면 마지막 핸들러로 떨어져 <b>500</b> 이
+     * 되고, 입력 오류가 서버 오류로 위장된다.
+     *
+     * <p>예외 메시지를 그대로 내보내지 않는다. Jackson 의 메시지에는 대상 Java 타입·필드 경로와 함께
+     * <b>보낸 값 일부</b>가 들어 있는데, 그 값이 질문·오류 신고 본문일 수 있다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException e) {
+        log.debug("[요청] 본문을 읽을 수 없다: {}", e.getClass().getSimpleName());
+        return ResponseEntity.badRequest().body(ApiResponse.error("요청 본문을 읽을 수 없습니다."));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         return ResponseEntity.badRequest()
