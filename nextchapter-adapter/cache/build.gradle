@@ -5,6 +5,9 @@ dependencies {
     implementation project(':nextchapter-domain')
     implementation project(':nextchapter-application')
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // 블록 문서를 JSON 으로 담는다. jsr310 이 없으면 버전 생성 시각(LocalDateTime)이 직렬화되지 않는다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     // 여기서 틀릴 수 있는 것은 Java 코드가 아니라 Redis 명령의 의미다 — INCR 의 반환값, TTL 을 언제
     // 거는가, 창 키가 실제로 넘어가는가. StringRedisTemplate 을 목으로 바꾸면 그 셋이 정확히

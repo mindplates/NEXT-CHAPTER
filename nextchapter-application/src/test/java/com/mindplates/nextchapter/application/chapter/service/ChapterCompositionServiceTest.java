@@ -2,11 +2,16 @@ package com.mindplates.nextchapter.application.chapter.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort;
+import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort.CachedChapterDocument;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
@@ -23,11 +28,13 @@ import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
 import com.mindplates.nextchapter.domain.skeleton.model.Skeleton;
 import com.mindplates.nextchapter.domain.skeleton.model.SkeletonStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -50,12 +57,18 @@ class ChapterCompositionServiceTest {
     @Mock
     LoadChapterVersionPort loadChapterVersionPort;
 
+    @Mock
+    ChapterDocumentCachePort chapterDocumentCachePort;
+
     ChapterCompositionService service;
 
     @BeforeEach
     void setUp() {
         service = new ChapterCompositionService(
-                new PublishedSkeletonGuard(loadSkeletonPort), loadChapterPort, loadChapterVersionPort);
+                new PublishedSkeletonGuard(loadSkeletonPort),
+                loadChapterPort,
+                loadChapterVersionPort,
+                chapterDocumentCachePort);
     }
 
     private static Chapter chapter() {
@@ -78,11 +91,13 @@ class ChapterCompositionServiceTest {
                 LocalDateTime.of(2026, 8, 12, 9, 0));
     }
 
+    /** 캐시 미스 상태. 원천에서 읽고 채우는 경로가 기본 시나리오다. */
     private void stubPublished() {
         when(loadSkeletonPort.findById(5L))
                 .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
         when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
-        when(loadChapterVersionPort.findLatest(100L)).thenReturn(Optional.of(version()));
+        when(chapterDocumentCachePort.find(eq(100L), eq(2), any())).thenReturn(Optional.empty());
+        when(loadChapterVersionPort.find(100L, 2)).thenReturn(Optional.of(version()));
     }
 
     @Test
@@ -148,7 +163,7 @@ class ChapterCompositionServiceTest {
 
         assertThatThrownBy(() -> service.compose(42L, 100L, DeliveryFormat.WEB))
                 .isInstanceOf(EntityNotFoundException.class);
-        verify(loadChapterVersionPort, never()).findLatest(anyLong());
+        verify(loadChapterVersionPort, never()).find(anyLong(), anyInt());
     }
 
     @Test
@@ -167,13 +182,52 @@ class ChapterCompositionServiceTest {
     @Test
     @DisplayName("본문이 없으면 빈 목록이 아니라 404 다")
     void missingBodyIsNotFound() {
-        when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(loadChapterPort.findById(100L))
+                .thenReturn(Optional.of(new Chapter(100L, 5L, "gradient-descent", "경사하강법", "요약", 0, 0, 0, null, null)));
         when(loadSkeletonPort.findById(5L))
                 .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
-        when(loadChapterVersionPort.findLatest(100L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.compose(42L, 100L, DeliveryFormat.WEB))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("챕터 본문");
+    }
+
+    /** 캐시 히트일 때 본문 스냅샷(JSONB)을 읽지 않는 것이 이 캐시의 이득 전부다. */
+    @Test
+    @DisplayName("캐시 히트면 본문 스냅샷을 읽지 않는다")
+    void cacheHitSkipsSnapshotRead() {
+        when(loadSkeletonPort.findById(5L))
+                .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
+        when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(chapterDocumentCachePort.find(100L, 2, DeliveryFormat.WEB))
+                .thenReturn(Optional.of(new CachedChapterDocument(
+                        100L,
+                        2,
+                        DeliveryFormat.WEB,
+                        List.of(Block.text("b1", BlockType.HEADING, "캐시된 제목")),
+                        true,
+                        "b2 설명 보강",
+                        LocalDateTime.of(2026, 8, 12, 9, 0))));
+
+        ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        assertThat(view.blocks()).extracting(Block::text).containsExactly("캐시된 제목");
+        verify(loadChapterVersionPort, never()).find(anyLong(), anyInt());
+    }
+
+    /** 미스일 때 채워 두지 않으면 캐시가 영원히 비어 있다 — 조회는 성공하므로 에러 없이 느려진다. */
+    @Test
+    @DisplayName("캐시 미스면 원천을 읽고 형태별로 걸러 채운다")
+    void cacheMissFillsFilteredDocument() {
+        stubPublished();
+
+        service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        ArgumentCaptor<CachedChapterDocument> stored = ArgumentCaptor.forClass(CachedChapterDocument.class);
+        verify(chapterDocumentCachePort).put(stored.capture());
+        assertThat(stored.getValue().version()).isEqualTo(2);
+        assertThat(stored.getValue().format()).isEqualTo(DeliveryFormat.WEB);
+        // 저장 시점에 걸러 둔다 — 형태가 키에 있으므로 값에 다른 형태의 블록이 섞이면 안 된다.
+        assertThat(stored.getValue().blocks()).extracting(Block::id).containsExactly("b1", "b2", "b4");
     }
 }
