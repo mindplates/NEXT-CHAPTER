@@ -61,6 +61,11 @@ public record Signal(
                 throw new IllegalArgumentException(type + " 신호에 '" + required + "' 가 필요합니다.");
             }
         }
+        // 진행률은 숫자여야 한다. 집계가 이 값을 SQL 에서 숫자로 캐스팅하므로, 문자열이 한 줄이라도
+        // 섞이면 그 사용자의 레이어 조회가 통째로 실패한다 — 저장 시점에 막는 편이 싸다.
+        if (type == SignalType.PROGRESS) {
+            requirePercent(payload.get("percent"));
+        }
         occurredAt = occurredAt == null ? LocalDateTime.now() : occurredAt;
     }
 
@@ -73,6 +78,22 @@ public record Signal(
             SignalType type,
             Map<String, Object> payload) {
         return new Signal(null, userId, chapterId, chapterVersion, blockId, format, type, payload, null, null);
+    }
+
+    private static void requirePercent(Object raw) {
+        double percent;
+        if (raw instanceof Number number) {
+            percent = number.doubleValue();
+        } else {
+            try {
+                percent = Double.parseDouble(String.valueOf(raw));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("진행률은 숫자여야 합니다: " + raw);
+            }
+        }
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("진행률은 0~100 이어야 합니다: " + percent);
+        }
     }
 
     /** 개인화 보충 블록에 붙은 신호. 공용 본문에는 없는 블록이므로 집단 집계에서 구분해야 한다. */
