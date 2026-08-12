@@ -23,6 +23,9 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // 초기 카탈로그 시드 파일을 읽는다. 조립 모듈이 JSON 을 직접 다루는 유일한 지점이고,
+    // 그 이유는 "언제 투입하는가"가 기동 절차의 관심사이기 때문이다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 

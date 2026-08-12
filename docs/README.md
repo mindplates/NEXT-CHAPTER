@@ -34,7 +34,7 @@ docs/
 | [M0 기반 골격과 CI](roadmap/m0-foundation.md) | 기능 없이 바닥부터 깐다 | ✅ 완료 | 6 / 6 |
 | [M1 카탈로그·주제 매핑](roadmap/m1-catalog.md) | 입력이 하나의 뼈대로 수렴한다 | ✅ 완료 | 6 / 6 |
 | [M2 뼈대 생성 파이프라인](roadmap/m2-generation.md) | 주제 확정 → published 뼈대 | ✅ 완료 | 9 / 9 |
-| [M3 학습 경험 (웹)](roadmap/m3-consumption.md) | 소비가 시작되고 신호가 쌓인다 | 🟡 진행 중 | 6 / 7 |
+| [M3 학습 경험 (웹)](roadmap/m3-consumption.md) | 소비가 시작되고 신호가 쌓인다 | ✅ 완료 | 7 / 7 |
 | [M4 개인 루프](roadmap/m4-personal-loop.md) | 방금 답한 결과가 다음 챕터에 반영된다 | ⬜ 예정 | 0 / 5 |
 | [M5 집단 루프](roadmap/m5-collective-loop.md) ★ | 신호가 뼈대를 고치고, 개선을 확인한다 | ⬜ 예정 | 0 / 7 |
 | [M6 딜리버리 확장](roadmap/m6-delivery-formats.md) | 영상·PPT로 뻗는다 | ⬜ 예정 | 0 / 7 |

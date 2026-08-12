@@ -1,0 +1,79 @@
+{
+  "_comment": [
+    "초기 카탈로그 시드 — 도메인 1개, 분야 5개, 주제 4개.",
+    "",
+    "분야가 주제보다 많은 것이 의도다. 분야는 LLM 매핑이 층별 좁히기를 하는 발판이고(각 단계 후보를",
+    "수십 개로 유지한다), 주제는 뼈대가 붙는 지점이라 소수여야 한다 — 넓게 벌리면 뼈대당 사용자가",
+    "1~2명씩 붙어 집단 루프가 임계치를 영원히 못 넘는다. 전량 30~50개는 M7 P7.2 다.",
+    "",
+    "주제 4개를 두 분야에 모은 것도 같은 이유다. 서로 인접한 주제여야 한 사람이 여러 챕터를 이어 보고,",
+    "그 신호가 같은 뼈대들에 쌓인다.",
+    "",
+    "별칭은 가장 싼 수렴 수단이다 — 맞으면 LLM 을 부르지 않으므로 비용도 지연도 0이고 결과가 결정적이다."
+  ],
+  "domains": [
+    {
+      "slug": "computer-science",
+      "name": "컴퓨터과학",
+      "description": "계산과 정보를 다루는 분야",
+      "fields": [
+        {
+          "slug": "artificial-intelligence",
+          "name": "인공지능",
+          "description": "데이터로 규칙을 배우는 시스템",
+          "topics": [
+            {
+              "slug": "machine-learning",
+              "name": "머신러닝",
+              "description": "데이터에서 패턴을 학습해 예측하는 방법의 전 범위",
+              "aliases": ["기계학습", "ML", "ML 입문", "머신 러닝", "machine learning"]
+            },
+            {
+              "slug": "neural-networks",
+              "name": "신경망",
+              "description": "층으로 쌓은 함수로 표현을 학습하는 모델",
+              "aliases": ["뉴럴 네트워크", "인공신경망", "neural network", "딥러닝 기초"]
+            }
+          ]
+        },
+        {
+          "slug": "programming",
+          "name": "프로그래밍",
+          "description": "언어와 도구로 문제를 코드로 옮기는 일",
+          "topics": [
+            {
+              "slug": "python-basics",
+              "name": "파이썬 기초",
+              "description": "문법부터 표준 라이브러리까지의 첫 걸음",
+              "aliases": ["python", "파이썬", "파이썬 입문", "python basics"]
+            },
+            {
+              "slug": "git-version-control",
+              "name": "Git 버전 관리",
+              "description": "변경 이력을 다루는 분산 버전 관리",
+              "aliases": ["git", "깃", "버전관리", "형상관리"]
+            }
+          ]
+        },
+        {
+          "slug": "data-structures-algorithms",
+          "name": "자료구조와 알고리즘",
+          "description": "데이터를 담는 방법과 다루는 절차",
+          "topics": []
+        },
+        {
+          "slug": "databases",
+          "name": "데이터베이스",
+          "description": "데이터를 저장하고 질의하는 시스템",
+          "topics": []
+        },
+        {
+          "slug": "web-development",
+          "name": "웹 개발",
+          "description": "브라우저와 서버로 이루어지는 애플리케이션",
+          "topics": []
+        }
+      ]
+    }
+  ]
+}
