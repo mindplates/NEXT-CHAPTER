@@ -28,7 +28,22 @@ public final class LayerComposition {
      * @return 원본 순서를 유지한 블록 목록. 각 보충 블록은 자기 앵커 <b>바로 뒤</b>에 온다
      */
     public static List<Block> compose(BlockDocument document, DeliveryFormat format, ChapterLayer layer) {
-        List<Block> base = document.blocksFor(format);
+        return compose(document, format, layer, UnderstandingLevel.UNKNOWN);
+    }
+
+    /**
+     * 이해도까지 반영한 합성.
+     *
+     * <p>이해도가 바꾸는 것은 <b>퀴즈 문항의 선택</b>뿐이다. 설명 블록은 누구에게나 같은 텍스트여야 하고,
+     * 그래야 "같은 지점에서 틀렸다"를 겹쳐 볼 수 있다. 문항을 고르는 것은 그 비교를 깨지 않는다 — 각 문항의
+     * 오답률은 <b>그 문항을 본 사람들 사이에서</b> 계산되고, 신호에 난이도가 함께 기록돼 집계에서 보정할 수
+     * 있다.
+     */
+    public static List<Block> compose(
+            BlockDocument document, DeliveryFormat format, ChapterLayer layer, UnderstandingLevel level) {
+        List<Block> base = document.blocksFor(format).stream()
+                .filter(block -> QuizSelection.includes(level, block))
+                .toList();
         if (layer == null || layer.isEmpty()) {
             return base;
         }

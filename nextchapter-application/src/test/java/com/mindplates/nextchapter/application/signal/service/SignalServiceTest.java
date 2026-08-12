@@ -219,6 +219,8 @@ class SignalServiceTest {
             ArgumentCaptor<Signal> saved = ArgumentCaptor.forClass(Signal.class);
             verify(saveSignalPort).save(saved.capture());
             assertThat(saved.getValue().payload()).containsEntry("correct", true);
+            // 난이도 없이 오답률을 합치면 쉬운 문항을 본 집단과 어려운 문항을 본 집단이 섞인다.
+            assertThat(saved.getValue().payload()).containsEntry("difficulty", "CORE");
         }
 
         /** 고른 답이 없으면 채점할 수 없다. 저장하면 정답 여부 없는 퀴즈 신호가 남는다. */

@@ -16,6 +16,7 @@ import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
 import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
+import com.mindplates.nextchapter.application.layer.port.out.LoadChapterUnderstandingPort;
 import com.mindplates.nextchapter.application.layer.port.out.LoadSupplementBlockPort;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
@@ -65,6 +66,9 @@ class ChapterCompositionServiceTest {
     @Mock
     LoadSupplementBlockPort loadSupplementBlockPort;
 
+    @Mock
+    LoadChapterUnderstandingPort loadChapterUnderstandingPort;
+
     ChapterCompositionService service;
 
     @BeforeEach
@@ -73,7 +77,8 @@ class ChapterCompositionServiceTest {
                 new PublishedSkeletonGuard(loadSkeletonPort),
                 loadChapterPort,
                 new SharedChapterDocuments(loadChapterVersionPort, chapterDocumentCachePort),
-                loadSupplementBlockPort);
+                loadSupplementBlockPort,
+                loadChapterUnderstandingPort);
     }
 
     private static Chapter chapter() {
@@ -103,6 +108,8 @@ class ChapterCompositionServiceTest {
         when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
         when(chapterDocumentCachePort.find(eq(100L), eq(2), any())).thenReturn(Optional.empty());
         when(loadChapterVersionPort.find(100L, 2)).thenReturn(Optional.of(version()));
+        when(loadChapterUnderstandingPort.findByChapter(42L, 100L))
+                .thenReturn(com.mindplates.nextchapter.domain.layer.model.ChapterUnderstanding.none(100L));
     }
 
     @Test
@@ -241,6 +248,8 @@ class ChapterCompositionServiceTest {
         when(loadSkeletonPort.findById(5L))
                 .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
         when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(loadChapterUnderstandingPort.findByChapter(42L, 100L))
+                .thenReturn(com.mindplates.nextchapter.domain.layer.model.ChapterUnderstanding.none(100L));
         when(chapterDocumentCachePort.find(100L, 2, DeliveryFormat.WEB))
                 .thenReturn(Optional.of(new CachedChapterDocument(
                         100L,
@@ -266,6 +275,8 @@ class ChapterCompositionServiceTest {
         when(loadSkeletonPort.findById(5L))
                 .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
         when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(loadChapterUnderstandingPort.findByChapter(42L, 100L))
+                .thenReturn(com.mindplates.nextchapter.domain.layer.model.ChapterUnderstanding.none(100L));
         when(chapterDocumentCachePort.find(100L, 2, DeliveryFormat.WEB))
                 .thenReturn(Optional.of(new CachedChapterDocument(
                         100L,

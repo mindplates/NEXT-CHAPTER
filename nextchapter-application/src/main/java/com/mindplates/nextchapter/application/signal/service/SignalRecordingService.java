@@ -16,6 +16,7 @@ import com.mindplates.nextchapter.domain.chapter.model.BlockIds;
 import com.mindplates.nextchapter.domain.chapter.model.BlockType;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
 import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
+import com.mindplates.nextchapter.domain.chapter.model.QuizDifficulty;
 import com.mindplates.nextchapter.domain.signal.model.Signal;
 import com.mindplates.nextchapter.domain.signal.model.SignalType;
 import java.util.LinkedHashMap;
@@ -49,6 +50,12 @@ public class SignalRecordingService implements RecordSignalUseCase {
 
     /** 서버가 채점해 채우는 것 — 오답률의 원천. */
     private static final String CORRECT_KEY = "correct";
+
+    /**
+     * 그 사용자가 본 문항의 난이도. 개인화가 문항을 고르므로, 이것 없이 오답률을 합치면 쉬운 문항을 본
+     * 집단과 어려운 문항을 본 집단이 섞인다 — 집단 신호가 조용히 흐려진다.
+     */
+    private static final String DIFFICULTY_KEY = "difficulty";
 
     private final PublishedSkeletonGuard publishedSkeletonGuard;
     private final LoadChapterPort loadChapterPort;
@@ -113,6 +120,9 @@ public class SignalRecordingService implements RecordSignalUseCase {
 
         Map<String, Object> payload = new LinkedHashMap<>(command.payload());
         payload.put(CORRECT_KEY, matches(quiz.attributes().get(Block.ANSWER), choice));
+        // 난이도를 함께 기록한다. 사용자마다 다른 문항을 보므로, 난이도 없이 오답률을 합치면 쉬운 문항을
+        // 본 집단과 어려운 문항을 본 집단이 섞여 **집단 신호가 흐려진다.** M5 임계치 판정이 이 값으로 보정한다.
+        payload.put(DIFFICULTY_KEY, QuizDifficulty.of(quiz).name());
         return payload;
     }
 
