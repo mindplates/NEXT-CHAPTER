@@ -1,19 +1,231 @@
+/*
+ * 최소 스타일. 디자인 시스템을 두지 않는 이유는 지금 검증할 것이 렌더 경계(블록 → 화면)이지 외형이
+ * 아니기 때문이다. 블록 타입별 클래스 이름은 남겨 뒀다 — 나중에 스타일을 붙일 지점이 그것이다.
+ */
 :root {
-  font-family: system-ui, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  line-height: 1.6;
+  --text: #1a1a1a;
+  --muted: #666;
+  --line: #e3e3e3;
+  --accent: #2f6f4f;
+  --wrong: #a33;
   color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  padding: 2rem;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  line-height: 1.7;
+  color: var(--text);
 }
 
-ul {
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.page--narrow {
+  max-width: 28rem;
+}
+
+.shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.shell__brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+
+.shell__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.35rem;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button--quiet {
+  background: transparent;
+  color: var(--accent);
+}
+
+.button--tiny {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.8rem;
+}
+
+.provider-list,
+.candidate-list,
+.chapter-list {
   list-style: none;
   padding: 0;
+  display: grid;
+  gap: 0.5rem;
 }
 
-li {
-  padding: 0.25rem 0;
+.topic-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.topic-form input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  font: inherit;
+}
+
+/* --- 챕터 --------------------------------------------------------------- */
+
+.chapter__summary {
+  color: var(--muted);
+}
+
+.chapter__badge {
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(47, 111, 79, 0.08);
+}
+
+.chapter__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* 블록과 신호 도구를 나란히 둔다 — 질문이 블록에 붙어야 집단 루프가 지점을 특정할 수 있다. */
+.block-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.block-row__tools {
+  min-width: 5rem;
+}
+
+.block-tools {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.block-row:hover .block-tools,
+.block-tools--open {
+  opacity: 1;
+}
+
+.block-tools--open {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 12rem;
+}
+
+.block--formula {
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  overflow-x: auto;
+}
+
+.block--quiz {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+}
+
+.quiz-question {
+  font-weight: 600;
+}
+
+.quiz-choices {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.quiz-result--correct {
+  color: var(--accent);
+}
+
+.quiz-result--wrong {
+  color: var(--wrong);
+}
+
+.figure-chart {
+  width: 100%;
+  max-height: 16rem;
+}
+
+.figure-bar {
+  fill: var(--accent);
+}
+
+.figure-label {
+  font-size: 6px;
+  fill: var(--muted);
+}
+
+.figure-table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.figure-table th,
+.figure-table td {
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+.neighbors {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.neighbors ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.neighbors__relation {
+  display: inline-block;
+  min-width: 6rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }

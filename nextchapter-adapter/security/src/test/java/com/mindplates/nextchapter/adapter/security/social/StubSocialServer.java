@@ -62,7 +62,12 @@ final class StubSocialServer implements AutoCloseable {
     SocialAuthProperties.Registration registration(String clientId, String clientSecret) {
         String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
         return new SocialAuthProperties.Registration(
-                clientId, clientSecret, baseUrl + TOKEN_PATH, baseUrl + USER_INFO_PATH);
+                clientId,
+                clientSecret,
+                baseUrl + TOKEN_PATH,
+                baseUrl + USER_INFO_PATH,
+                baseUrl + "/authorize",
+                "profile email");
     }
 
     /** 토큰 교환 요청의 폼 본문. 제공자가 대조하는 값들이 실제로 실려 나갔는지 확인한다. */

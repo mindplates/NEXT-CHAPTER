@@ -14,6 +14,7 @@ import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCa
 import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort.CachedChapterDocument;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterVersionPort;
+import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
 import com.mindplates.nextchapter.application.skeleton.port.out.LoadSkeletonPort;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
@@ -106,7 +107,7 @@ class ChapterCompositionServiceTest {
 
         ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
 
-        assertThat(view.blocks()).extracting(Block::id).containsExactly("b1", "b2", "b4");
+        assertThat(view.blocks()).extracting(BlockView::id).containsExactly("b1", "b2", "b4");
         assertThat(view.format()).isEqualTo(DeliveryFormat.WEB);
     }
 
@@ -117,7 +118,7 @@ class ChapterCompositionServiceTest {
         stubPublished();
 
         assertThat(service.compose(42L, 100L, DeliveryFormat.VIDEO).blocks())
-                .extracting(Block::id)
+                .extracting(BlockView::id)
                 .containsExactly("b1", "b2", "b3", "b4");
     }
 
@@ -191,6 +192,35 @@ class ChapterCompositionServiceTest {
                 .hasMessageContaining("챕터 본문");
     }
 
+    /**
+     * <b>퀴즈 정답이 응답에 없어야 한다.</b> 정답이 브라우저에 있으면 채점을 클라이언트가 하게 되고 그
+     * 결과는 위조할 수 있다 — 오답률이 집단 루프의 핵심 신호라 위조 가능성 자체가 임계치 판정의 근거를
+     * 없앤다. 질문·선택지는 그대로 나가야 한다(그게 없으면 문제를 풀 수 없다).
+     */
+    @Test
+    @DisplayName("퀴즈 정답은 내려가지 않는다 — 질문·선택지는 그대로다")
+    void redactsQuizAnswer() {
+        when(loadSkeletonPort.findById(5L))
+                .thenReturn(Optional.of(new Skeleton(5L, 77L, SkeletonStatus.PUBLISHED, null, null)));
+        when(loadChapterPort.findById(100L)).thenReturn(Optional.of(chapter()));
+        when(chapterDocumentCachePort.find(100L, 2, DeliveryFormat.WEB))
+                .thenReturn(Optional.of(new CachedChapterDocument(
+                        100L,
+                        2,
+                        DeliveryFormat.WEB,
+                        List.of(Block.quiz("b6", "무엇인가?", List.of("가", "나"), "가")),
+                        false,
+                        null,
+                        null)));
+
+        ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
+
+        assertThat(view.blocks()).singleElement().satisfies(block -> {
+            assertThat(block.attributes()).containsKey("question").containsKey("choices");
+            assertThat(block.attributes()).doesNotContainKey("answer");
+        });
+    }
+
     /** 캐시 히트일 때 본문 스냅샷(JSONB)을 읽지 않는 것이 이 캐시의 이득 전부다. */
     @Test
     @DisplayName("캐시 히트면 본문 스냅샷을 읽지 않는다")
@@ -210,7 +240,7 @@ class ChapterCompositionServiceTest {
 
         ComposedChapterView view = service.compose(42L, 100L, DeliveryFormat.WEB);
 
-        assertThat(view.blocks()).extracting(Block::text).containsExactly("캐시된 제목");
+        assertThat(view.blocks()).extracting(BlockView::text).containsExactly("캐시된 제목");
         verify(loadChapterVersionPort, never()).find(anyLong(), anyInt());
     }
 
@@ -227,6 +257,7 @@ class ChapterCompositionServiceTest {
         assertThat(stored.getValue().version()).isEqualTo(2);
         assertThat(stored.getValue().format()).isEqualTo(DeliveryFormat.WEB);
         // 저장 시점에 걸러 둔다 — 형태가 키에 있으므로 값에 다른 형태의 블록이 섞이면 안 된다.
+        // 캐시에 들어가는 것은 도메인 블록이다(정답 포함) — 정답을 거르는 것은 응답을 만드는 시점이다.
         assertThat(stored.getValue().blocks()).extracting(Block::id).containsExactly("b1", "b2", "b4");
     }
 }

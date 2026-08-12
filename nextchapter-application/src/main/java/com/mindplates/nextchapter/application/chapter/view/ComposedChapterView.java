@@ -1,6 +1,5 @@
 package com.mindplates.nextchapter.application.chapter.view;
 
-import com.mindplates.nextchapter.domain.chapter.model.Block;
 import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,7 +23,7 @@ public record ComposedChapterView(
         String summary,
         int version,
         DeliveryFormat format,
-        List<Block> blocks,
+        List<BlockView> blocks,
         boolean personalized,
         boolean improvedFromPrevious,
         String changeSummary,

@@ -148,12 +148,46 @@ class SocialProfileClientTest {
     @DisplayName("클라이언트 ID 만 있고 엔드포인트가 없으면 설정된 것이 아니다")
     void partialRegistrationIsNotConfigured() {
         SocialAuthProperties partial = new SocialAuthProperties(
-                Map.of(SocialProvider.GOOGLE, new SocialAuthProperties.Registration("id", "secret", null, null)),
+                Map.of(
+                        SocialProvider.GOOGLE,
+                        new SocialAuthProperties.Registration("id", "secret", null, null, null, null)),
                 null,
                 null);
 
         assertThat(partial.isConfigured(SocialProvider.GOOGLE)).isFalse();
         assertThatThrownBy(() -> partial.require(SocialProvider.GOOGLE)).isInstanceOf(InvalidOperationException.class);
+    }
+
+    /**
+     * 동의 화면 주소를 서버가 조립한다. 클라이언트가 만들면 {@code client_id} 를 프론트엔드에 박아야 하고,
+     * 제공자를 추가할 때 서버와 클라이언트를 함께 고쳐야 한다.
+     */
+    @Test
+    @DisplayName("동의 화면 주소에 client_id·redirect_uri·scope·state 가 실린다")
+    void buildsAuthorizationUri() throws IOException {
+        try (StubSocialServer stub = StubSocialServer.with(TOKEN_OK, "{}")) {
+            String uri = new GoogleSocialProfileClient(properties(stub, SocialProvider.GOOGLE, "secret-1"))
+                    .authorizationUri("http://localhost:34100/login/google", "state-1");
+
+            assertThat(uri)
+                    .contains("/authorize?")
+                    .contains("response_type=code")
+                    .contains("client_id=google-client")
+                    // 콜백 주소는 인코딩돼야 한다 — 날것으로 붙이면 제공자가 파라미터 경계를 잘못 읽는다.
+                    .contains("redirect_uri=http%3A%2F%2Flocalhost%3A34100%2Flogin%2Fgoogle")
+                    .contains("scope=profile+email")
+                    .contains("state=state-1");
+        }
+    }
+
+    @Test
+    @DisplayName("설정되지 않은 제공자의 동의 화면 주소는 만들 수 없다")
+    void rejectsAuthorizationUriWhenUnconfigured() {
+        GoogleSocialProfileClient client =
+                new GoogleSocialProfileClient(new SocialAuthProperties(Map.of(), null, null));
+
+        assertThatThrownBy(() -> client.authorizationUri("http://localhost/cb", "state-1"))
+                .isInstanceOf(InvalidOperationException.class);
     }
 
     private static SocialAuthProperties properties(StubSocialServer stub, SocialProvider provider, String secret) {

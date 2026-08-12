@@ -1,4 +1,4 @@
-import { getJson } from '../../../shared/api/httpClient'
+import { getRaw } from '../../../shared/api/httpClient'
 
 export type HealthStatus = 'UP' | 'DOWN' | 'OUT_OF_SERVICE' | 'UNKNOWN'
 
@@ -14,5 +14,5 @@ export interface HealthResponse {
 
 /** 저장소 5개(PostgreSQL · Neo4j · Kafka · Redis · 오브젝트 스토리지)의 연결 상태가 여기 담긴다. */
 export function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
-  return getJson<HealthResponse>('/actuator/health', signal)
+  return getRaw<HealthResponse>('/actuator/health', signal)
 }

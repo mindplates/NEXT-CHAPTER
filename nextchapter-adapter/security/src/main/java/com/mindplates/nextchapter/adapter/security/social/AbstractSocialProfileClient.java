@@ -5,7 +5,9 @@ import com.mindplates.nextchapter.application.user.port.out.SocialProfile;
 import com.mindplates.nextchapter.application.user.port.out.SocialProfileClientPort;
 import com.mindplates.nextchapter.common.exception.AuthenticationFailedException;
 import com.mindplates.nextchapter.common.exception.InvalidOperationException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +41,33 @@ abstract class AbstractSocialProfileClient implements SocialProfileClientPort {
                 .build());
         factory.setReadTimeout(properties.readTimeout());
         this.restClient = RestClient.builder().requestFactory(factory).build();
+    }
+
+    /**
+     * 동의 화면 주소를 조립한다. 파라미터 이름은 OAuth2 표준이라 제공자별로 다르지 않다 — 다른 것은
+     * 엔드포인트와 scope 이고, 둘 다 설정값이다.
+     */
+    @Override
+    public final String authorizationUri(String redirectUri, String state) {
+        Registration registration = properties.require(provider());
+        StringBuilder uri = new StringBuilder(registration.authorizationUri())
+                .append(registration.authorizationUri().contains("?") ? "&" : "?")
+                .append("response_type=code")
+                .append("&client_id=")
+                .append(encode(registration.clientId()))
+                .append("&redirect_uri=")
+                .append(encode(redirectUri));
+        if (registration.scope() != null && !registration.scope().isBlank()) {
+            uri.append("&scope=").append(encode(registration.scope()));
+        }
+        if (state != null && !state.isBlank()) {
+            uri.append("&state=").append(encode(state));
+        }
+        return uri.toString();
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @Override

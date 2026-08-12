@@ -51,11 +51,22 @@ public record SocialAuthProperties(
         return registration != null && registration.isConfigured();
     }
 
-    /** @param clientSecret 제공자에 따라 없을 수 있다(Kakao 는 선택). 그래서 필수 항목에 넣지 않는다 */
-    public record Registration(String clientId, String clientSecret, String tokenUri, String userInfoUri) {
+    /**
+     * @param clientSecret 제공자에 따라 없을 수 있다(Kakao 는 선택). 그래서 필수 항목에 넣지 않는다
+     * @param authorizationUri 사용자를 보낼 동의 화면. <b>서버가 조립해 내려 준다</b> — 클라이언트가 만들면
+     *     client_id 를 프론트엔드에 박아야 하고, 제공자를 추가할 때 서버와 클라이언트를 함께 고쳐야 한다
+     * @param scope 요청할 동의 범위. 제공자마다 이름이 달라 설정값이다
+     */
+    public record Registration(
+            String clientId,
+            String clientSecret,
+            String tokenUri,
+            String userInfoUri,
+            String authorizationUri,
+            String scope) {
 
         public boolean isConfigured() {
-            return hasText(clientId) && hasText(tokenUri) && hasText(userInfoUri);
+            return hasText(clientId) && hasText(tokenUri) && hasText(userInfoUri) && hasText(authorizationUri);
         }
 
         private static boolean hasText(String value) {

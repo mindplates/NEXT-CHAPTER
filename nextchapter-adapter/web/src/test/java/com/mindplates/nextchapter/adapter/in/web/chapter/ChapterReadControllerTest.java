@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.mindplates.nextchapter.adapter.in.web.support.GlobalExceptionHandler;
 import com.mindplates.nextchapter.application.chapter.port.in.ComposeChapterUseCase;
+import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.domain.chapter.model.Block;
@@ -43,7 +44,8 @@ class ChapterReadControllerTest {
                 "요약",
                 2,
                 format,
-                List.of(Block.text("b1", BlockType.HEADING, "경사하강법이란"), Block.figure("b2", Map.of("type", "plot"))),
+                BlockView.forLearner(List.of(
+                        Block.text("b1", BlockType.HEADING, "경사하강법이란"), Block.figure("b2", Map.of("type", "plot")))),
                 false,
                 true,
                 "b2 설명 보강",

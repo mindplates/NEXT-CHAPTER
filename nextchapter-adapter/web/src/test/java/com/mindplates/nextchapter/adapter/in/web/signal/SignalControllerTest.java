@@ -40,7 +40,15 @@ class SignalControllerTest {
     RecordSignalUseCase recordSignalUseCase;
 
     private static SignalView view(SignalType type, String blockId) {
-        return new SignalView(7L, 100L, 2, blockId, DeliveryFormat.WEB, type, LocalDateTime.of(2026, 8, 12, 9, 0));
+        return new SignalView(
+                7L,
+                100L,
+                2,
+                blockId,
+                DeliveryFormat.WEB,
+                type,
+                type == SignalType.QUIZ_ANSWER ? Boolean.FALSE : null,
+                LocalDateTime.of(2026, 8, 12, 9, 0));
     }
 
     private static Principal principal(String name) {
@@ -60,11 +68,13 @@ class SignalControllerTest {
                                 .content(
                                         """
                                 {"chapterVersion":2,"blockId":"b6","format":"WEB","type":"QUIZ_ANSWER",
-                                 "payload":{"correct":false}}
+                                 "payload":{"choice":"가"}}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(7))
-                .andExpect(jsonPath("$.data.blockId").value("b6"));
+                .andExpect(jsonPath("$.data.blockId").value("b6"))
+                // 채점 결과는 되돌려준다 — 정답을 내려 주지 않으므로 클라이언트가 알 방법이 없다.
+                .andExpect(jsonPath("$.data.correct").value(false));
 
         ArgumentCaptor<RecordSignalCommand> command = ArgumentCaptor.forClass(RecordSignalCommand.class);
         verify(recordSignalUseCase).record(org.mockito.ArgumentMatchers.eq(42L), command.capture());
@@ -77,7 +87,7 @@ class SignalControllerTest {
         org.assertj.core.api.Assertions.assertThat(command.blockId()).isEqualTo("b6");
         org.assertj.core.api.Assertions.assertThat(command.format()).isEqualTo(DeliveryFormat.WEB);
         org.assertj.core.api.Assertions.assertThat(command.type()).isEqualTo(SignalType.QUIZ_ANSWER);
-        org.assertj.core.api.Assertions.assertThat(command.payload()).isEqualTo(Map.of("correct", false));
+        org.assertj.core.api.Assertions.assertThat(command.payload()).isEqualTo(Map.of("choice", "가"));
     }
 
     @Test

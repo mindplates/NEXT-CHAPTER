@@ -12,13 +12,14 @@ import com.mindplates.nextchapter.application.user.port.in.GetSupportedSocialPro
 import com.mindplates.nextchapter.application.user.port.in.GetUserUseCase;
 import com.mindplates.nextchapter.application.user.port.in.SocialLoginUseCase;
 import com.mindplates.nextchapter.application.user.port.in.command.SocialLoginCommand;
+import com.mindplates.nextchapter.application.user.view.SocialProviderView;
 import com.mindplates.nextchapter.application.user.view.UserTokenView;
 import com.mindplates.nextchapter.application.user.view.UserView;
 import com.mindplates.nextchapter.common.exception.InvalidOperationException;
 import com.mindplates.nextchapter.domain.user.model.SocialProvider;
 import java.security.Principal;
 import java.time.Instant;
-import java.util.Set;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,15 +103,28 @@ class UserAuthControllerTest {
 
     /** 목록을 설정에서 역산하는 것이 요점이다 — 하드코딩하면 설정 안 된 제공자의 버튼이 화면에 남는다. */
     @Test
-    @DisplayName("지원 제공자 목록이 정렬돼 나온다")
+    @DisplayName("지원 제공자와 동의 화면 주소가 함께 나온다")
     void listsSupportedProviders() throws Exception {
-        when(getSupportedSocialProvidersUseCase.supported())
-                .thenReturn(Set.of(SocialProvider.KAKAO, SocialProvider.GOOGLE));
+        when(getSupportedSocialProvidersUseCase.available("http://localhost:34100/login", "state-1"))
+                .thenReturn(List.of(
+                        new SocialProviderView(SocialProvider.GOOGLE, "https://accounts.google.com/o/oauth2/v2/auth?x"),
+                        new SocialProviderView(SocialProvider.KAKAO, "https://kauth.kakao.com/oauth/authorize?x")));
 
-        mockMvc.perform(get("/api/auth/providers"))
+        mockMvc.perform(get("/api/auth/providers")
+                        .param("redirectUri", "http://localhost:34100/login")
+                        .param("state", "state-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0]").value("GOOGLE"))
-                .andExpect(jsonPath("$.data[1]").value("KAKAO"));
+                .andExpect(jsonPath("$.data[0].provider").value("GOOGLE"))
+                .andExpect(
+                        jsonPath("$.data[0].authorizationUri").value("https://accounts.google.com/o/oauth2/v2/auth?x"))
+                .andExpect(jsonPath("$.data[1].provider").value("KAKAO"));
+    }
+
+    /** 콜백 주소 없이 목록을 주면 동의 화면 주소를 만들 수 없다 — 버튼이 눌러도 아무 일도 하지 않는다. */
+    @Test
+    @DisplayName("콜백 주소가 없으면 400 이다")
+    void requiresRedirectUri() throws Exception {
+        mockMvc.perform(get("/api/auth/providers")).andExpect(status().isBadRequest());
     }
 
     @Test

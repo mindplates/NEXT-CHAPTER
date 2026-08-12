@@ -17,6 +17,17 @@ public interface SocialProfileClientPort {
     SocialProvider provider();
 
     /**
+     * 사용자를 보낼 동의 화면 주소. <b>서버가 조립한다.</b>
+     *
+     * <p>클라이언트가 만들면 {@code client_id} 를 프론트엔드에 박아야 하고, 제공자를 추가할 때 서버와
+     * 클라이언트를 함께 고쳐야 한다 — 그러면 "설정은 됐는데 버튼이 없다"거나 그 반대인 상태가 생긴다.
+     *
+     * @param state 클라이언트가 만든 임의 값. 콜백에서 같은 값인지 확인해 다른 사이트가 시작한 로그인
+     *     흐름을 걸러 낸다. 서버가 만들면 저장소가 필요하고, 이 값은 브라우저 안에서만 왕복하면 충분하다
+     */
+    String authorizationUri(String redirectUri, String state);
+
+    /**
      * @param redirectUri 인가 코드를 받을 때 쓴 값과 <b>같아야</b> 한다. 제공자가 이 값을 대조하며,
      *     어긋나면 코드 교환이 실패한다. 그래서 서버가 상수로 갖지 않고 요청에서 받는다 — 웹과 앱의
      *     리다이렉트 주소가 다르다

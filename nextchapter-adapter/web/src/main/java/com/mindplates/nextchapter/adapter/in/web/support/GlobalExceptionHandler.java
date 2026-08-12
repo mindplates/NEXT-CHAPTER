@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -81,6 +82,19 @@ public class GlobalExceptionHandler {
      *
      * <p>예외 메시지를 그대로 내보내지 않는다. 거기에는 대상 Java 타입 이름이 들어 있다.
      */
+    /**
+     * 필수 파라미터·헤더가 빠진 요청 — 400 이다.
+     *
+     * <p>{@link MethodArgumentTypeMismatchException}·{@link HttpMessageNotReadableException} 와 함께,
+     * <b>Spring MVC 의 바인딩 예외 전체</b>가 매핑돼 있지 않으면 잘못된 요청이 500 으로 나간다. 세 가지를
+     * 각각 발견했고 원인은 하나였다 — 마지막 핸들러가 모든 입력 오류를 서버 오류로 위장시킨다.
+     */
+    @ExceptionHandler(ServletRequestBindingException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBinding(ServletRequestBindingException e) {
+        log.debug("[요청] 바인딩 실패: {}", e.getClass().getSimpleName());
+        return ResponseEntity.badRequest().body(ApiResponse.error("필수 요청 값이 빠졌습니다."));
+    }
+
     /**
      * 본문을 읽을 수 없는 요청 — 400 이다.
      *

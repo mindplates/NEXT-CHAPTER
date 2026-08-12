@@ -5,6 +5,7 @@ import com.mindplates.nextchapter.adapter.in.web.user.dto.SocialLoginRequest;
 import com.mindplates.nextchapter.application.user.port.in.GetSupportedSocialProvidersUseCase;
 import com.mindplates.nextchapter.application.user.port.in.GetUserUseCase;
 import com.mindplates.nextchapter.application.user.port.in.SocialLoginUseCase;
+import com.mindplates.nextchapter.application.user.view.SocialProviderView;
 import com.mindplates.nextchapter.application.user.view.UserTokenView;
 import com.mindplates.nextchapter.application.user.view.UserView;
 import com.mindplates.nextchapter.common.response.ApiResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -36,11 +38,17 @@ public class UserAuthController {
     private final GetUserUseCase getUserUseCase;
     private final GetSupportedSocialProvidersUseCase getSupportedSocialProvidersUseCase;
 
-    /** 로그인 화면이 버튼을 그리기 위해 인증 전에 읽는다. 하드코딩하면 설정 안 된 제공자의 버튼이 남는다. */
+    /**
+     * 로그인 화면이 버튼을 그리기 위해 인증 전에 읽는다. 하드코딩하면 설정 안 된 제공자의 버튼이 남는다.
+     *
+     * <p>동의 화면 주소를 서버가 조립해 내려 준다 — 클라이언트에 {@code client_id} 를 박지 않기 위해서다.
+     * {@code redirectUri} 를 클라이언트가 정하는 이유는 웹과 앱의 콜백 주소가 다르기 때문이고, 인가 코드를
+     * 교환할 때 <b>같은 값</b>을 다시 보내야 한다.
+     */
     @GetMapping("/providers")
-    public ResponseEntity<ApiResponse<List<SocialProvider>>> providers() {
-        return ResponseEntity.ok(ApiResponse.ok(
-                getSupportedSocialProvidersUseCase.supported().stream().sorted().toList()));
+    public ResponseEntity<ApiResponse<List<SocialProviderView>>> providers(
+            @RequestParam String redirectUri, @RequestParam(required = false) String state) {
+        return ResponseEntity.ok(ApiResponse.ok(getSupportedSocialProvidersUseCase.available(redirectUri, state)));
     }
 
     @PostMapping("/social/{provider}")

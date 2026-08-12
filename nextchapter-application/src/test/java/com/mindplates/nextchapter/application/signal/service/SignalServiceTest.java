@@ -26,8 +26,11 @@ import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
 import com.mindplates.nextchapter.common.exception.InfrastructureException;
 import com.mindplates.nextchapter.common.exception.InvalidOperationException;
 import com.mindplates.nextchapter.domain.chapter.model.Block;
+import com.mindplates.nextchapter.domain.chapter.model.BlockDocument;
 import com.mindplates.nextchapter.domain.chapter.model.BlockType;
 import com.mindplates.nextchapter.domain.chapter.model.Chapter;
+import com.mindplates.nextchapter.domain.chapter.model.ChapterVersion;
+import com.mindplates.nextchapter.domain.chapter.model.ChapterVersionSource;
 import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
 import com.mindplates.nextchapter.domain.signal.model.Signal;
 import com.mindplates.nextchapter.domain.signal.model.SignalType;
@@ -90,6 +93,7 @@ class SignalServiceTest {
             service = new SignalRecordingService(
                     new PublishedSkeletonGuard(loadSkeletonPort),
                     loadChapterPort,
+                    loadChapterVersionPort,
                     new SharedChapterDocuments(loadChapterVersionPort, chapterDocumentCachePort),
                     saveSignalPort);
         }
@@ -116,9 +120,26 @@ class SignalServiceTest {
                             null)));
         }
 
+        /** 클라이언트는 <b>고른 답</b>만 보낸다. {@code correct} 는 서버가 채운다. */
         private static RecordSignalCommand quiz(int version, String blockId) {
             return new RecordSignalCommand(
-                    100L, version, blockId, DeliveryFormat.WEB, SignalType.QUIZ_ANSWER, Map.of("correct", false));
+                    100L, version, blockId, DeliveryFormat.WEB, SignalType.QUIZ_ANSWER, Map.of("choice", "가"));
+        }
+
+        /** 채점은 원천(버전 스냅샷)을 읽는다 — 사용자에게 내려간 문서에는 정답이 없다. */
+        private void stubSnapshot(String answer) {
+            when(loadChapterVersionPort.find(100L, 2))
+                    .thenReturn(Optional.of(new ChapterVersion(
+                            1L,
+                            100L,
+                            2,
+                            BlockDocument.of(
+                                    Block.text("b1", BlockType.HEADING, "제목"),
+                                    Block.quiz("b6", "질문", List.of("가", "나"), answer)),
+                            null,
+                            ChapterVersionSource.GENERATED,
+                            "pipeline",
+                            null)));
         }
 
         @Test
@@ -126,6 +147,7 @@ class SignalServiceTest {
         void recordsQuizAnswer() {
             stubPublishedChapter();
             stubDocument(2);
+            stubSnapshot("가");
             when(saveSignalPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             SignalView view = service.record(42L, quiz(2, "b6"));
@@ -148,11 +170,81 @@ class SignalServiceTest {
         void validatesAgainstConsumedVersion() {
             stubPublishedChapter();
             stubDocument(2);
+            stubSnapshot("가");
             when(saveSignalPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             service.record(42L, quiz(2, "b6"));
 
             verify(chapterDocumentCachePort).find(100L, 2, DeliveryFormat.WEB);
+        }
+
+        /**
+         * <b>서버가 채점한다.</b> 클라이언트가 {@code correct} 를 보내면 그 값은 위조할 수 있고, 오답률이
+         * 위조 가능해지는 순간 임계치 판정과 수정 전후 비교가 근거를 잃는다.
+         */
+        @Test
+        @DisplayName("정답 대조는 서버가 한다 — 클라이언트가 보낸 correct 를 믿지 않는다")
+        void gradesOnServer() {
+            stubPublishedChapter();
+            stubDocument(2);
+            stubSnapshot("나");
+            when(saveSignalPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            service.record(
+                    42L,
+                    new RecordSignalCommand(
+                            100L,
+                            2,
+                            "b6",
+                            DeliveryFormat.WEB,
+                            SignalType.QUIZ_ANSWER,
+                            Map.of("choice", "가", "correct", true)));
+
+            ArgumentCaptor<Signal> saved = ArgumentCaptor.forClass(Signal.class);
+            verify(saveSignalPort).save(saved.capture());
+            // 고른 답이 "가", 정답이 "나" 이므로 오답이다 — 클라이언트가 true 를 보냈어도 덮어쓴다.
+            assertThat(saved.getValue().payload()).containsEntry("correct", false);
+        }
+
+        @Test
+        @DisplayName("정답을 고르면 correct 가 참이다")
+        void gradesCorrectAnswer() {
+            stubPublishedChapter();
+            stubDocument(2);
+            stubSnapshot("가");
+            when(saveSignalPort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            service.record(42L, quiz(2, "b6"));
+
+            ArgumentCaptor<Signal> saved = ArgumentCaptor.forClass(Signal.class);
+            verify(saveSignalPort).save(saved.capture());
+            assertThat(saved.getValue().payload()).containsEntry("correct", true);
+        }
+
+        /** 고른 답이 없으면 채점할 수 없다. 저장하면 정답 여부 없는 퀴즈 신호가 남는다. */
+        @Test
+        @DisplayName("고른 답이 없으면 거절한다")
+        void rejectsQuizWithoutChoice() {
+            stubPublishedChapter();
+            stubDocument(2);
+
+            assertThatThrownBy(() -> service.record(
+                            42L,
+                            new RecordSignalCommand(
+                                    100L, 2, "b6", DeliveryFormat.WEB, SignalType.QUIZ_ANSWER, Map.of())))
+                    .isInstanceOf(InvalidOperationException.class);
+            verify(saveSignalPort, never()).save(any());
+        }
+
+        /** 퀴즈가 아닌 블록에 퀴즈 응답을 붙이면 채점할 정답이 없다 — 그 신호는 오답률을 왜곡한다. */
+        @Test
+        @DisplayName("퀴즈가 아닌 블록에는 퀴즈 응답을 남길 수 없다")
+        void rejectsQuizAnswerOnNonQuizBlock() {
+            stubPublishedChapter();
+            stubDocument(2);
+            stubSnapshot("가");
+
+            assertThatThrownBy(() -> service.record(42L, quiz(2, "b1"))).isInstanceOf(InvalidOperationException.class);
         }
 
         /** 없는 블록에 붙은 신호는 집계에 기여하지 않으면서 건수만 늘린다. */

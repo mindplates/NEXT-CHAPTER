@@ -22,6 +22,17 @@ public record Block(String id, BlockType type, String text, Map<String, Object> 
      */
     public static final String SOURCES = "sources";
 
+    /**
+     * 퀴즈 정답이 담기는 속성 키.
+     *
+     * <p>이 값은 <b>사용자에게 내려가면 안 된다.</b> 정답이 클라이언트에 있으면 오답률을 클라이언트가
+     * 계산하게 되고, 그 값은 위조할 수 있다 — 오답률은 집단 루프의 핵심 신호이므로 위조 가능한 순간
+     * 임계치 판정 전체가 근거를 잃는다. 채점은 서버가 이 속성으로 한다.
+     *
+     * <p>운영자에게는 그대로 보인다. 검수는 정답을 봐야 성립한다.
+     */
+    public static final String ANSWER = "answer";
+
     public Block {
         if (!BlockIds.isValid(id)) {
             throw new IllegalArgumentException("블록 ID 형식이 아닙니다: " + id);
@@ -68,6 +79,25 @@ public record Block(String id, BlockType type, String text, Map<String, Object> 
     /** ID 를 새로 발급받은 사본. 승계에 실패한 블록이 이 경로로 새 ID 를 받는다. */
     public Block withId(String newId) {
         return new Block(newId, type, text, attributes);
+    }
+
+    /**
+     * 사용자에게 내려도 되는 속성만.
+     *
+     * <p>퀴즈의 {@link #ANSWER} 를 뺀다. 정답이 브라우저에 있으면 채점을 클라이언트가 하게 되고, 그
+     * 결과는 위조할 수 있다 — 오답률이 집단 루프의 핵심 신호라 위조 가능성 자체가 임계치 판정의 근거를
+     * 없앤다. 그래서 <b>내리지 않고, 채점은 서버가 한다.</b>
+     *
+     * <p>블록 자체에서 정답을 지우지 않는 이유는 {@link BlockType#QUIZ} 의 필수 속성이기 때문이다 —
+     * 정답 없는 퀴즈는 애초에 만들 수 없어야 한다. 지우는 것은 응답을 만드는 시점의 결정이다.
+     */
+    public Map<String, Object> learnerAttributes() {
+        if (type != BlockType.QUIZ || !attributes.containsKey(ANSWER)) {
+            return attributes;
+        }
+        Map<String, Object> visible = new LinkedHashMap<>(attributes);
+        visible.remove(ANSWER);
+        return Map.copyOf(visible);
     }
 
     /** 이 블록이 출처를 달고 있는지. 검증 패스가 검사할 대상을 고르는 기준이다. */

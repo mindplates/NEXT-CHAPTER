@@ -3,6 +3,7 @@ package com.mindplates.nextchapter.application.chapter.service;
 import com.mindplates.nextchapter.application.chapter.port.in.ComposeChapterUseCase;
 import com.mindplates.nextchapter.application.chapter.port.out.ChapterDocumentCachePort.CachedChapterDocument;
 import com.mindplates.nextchapter.application.chapter.port.out.LoadChapterPort;
+import com.mindplates.nextchapter.application.chapter.view.BlockView;
 import com.mindplates.nextchapter.application.chapter.view.ComposedChapterView;
 import com.mindplates.nextchapter.application.skeleton.service.PublishedSkeletonGuard;
 import com.mindplates.nextchapter.common.exception.EntityNotFoundException;
@@ -65,7 +66,8 @@ public class ChapterCompositionService implements ComposeChapterUseCase {
                 chapter.summary(),
                 document.version(),
                 resolved,
-                compose(document, resolved, layer),
+                // 퀴즈 정답은 여기서 빠진다 — 채점은 서버가 하고, 클라이언트가 계산하면 위조할 수 있다.
+                BlockView.forLearner(compose(document, resolved, layer)),
                 !layer.isEmpty(),
                 document.improvedFromPrevious(),
                 document.changeSummary(),
