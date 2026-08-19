@@ -100,4 +100,28 @@ class RevisionTriggerPersistenceAdapterIT extends AbstractPostgresIT {
 
         assertThat(savedForNewVersion).isTrue();
     }
+
+    @Test
+    @DisplayName("새 트리거는 미처리 목록에 잡힌다")
+    void newTriggerIsClaimable() {
+        triggers.saveIfAbsent(trigger());
+
+        assertThat(triggers.claimUnprocessed(10)).singleElement().satisfies(claimed -> {
+            assertThat(claimed.id()).isNotNull();
+            assertThat(claimed.chapterId()).isEqualTo(chapterId);
+            assertThat(claimed.blockId()).isEqualTo("b6");
+        });
+    }
+
+    /** 처리 표시가 듣지 않으면 같은 트리거로 제안이 반복 생성돼 AI 호출 비용이 배가 된다. */
+    @Test
+    @DisplayName("처리 표시된 트리거는 다시 집히지 않는다")
+    void processedTriggerIsNotReclaimed() {
+        triggers.saveIfAbsent(trigger());
+        Long triggerId = triggers.claimUnprocessed(10).get(0).id();
+
+        triggers.markProcessed(triggerId);
+
+        assertThat(triggers.claimUnprocessed(10)).isEmpty();
+    }
 }

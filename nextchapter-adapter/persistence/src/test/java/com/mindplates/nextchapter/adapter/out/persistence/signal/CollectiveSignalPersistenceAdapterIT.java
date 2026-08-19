@@ -141,4 +141,32 @@ class CollectiveSignalPersistenceAdapterIT extends AbstractPostgresIT {
         assertThat(aggregate.wrongCount()).isZero();
         assertThat(aggregate.wrongRate()).isZero();
     }
+
+    /** "이 지점은 웹에서만 오답률이 높다" 진단이 이 값으로 가능해진다. */
+    @Test
+    @DisplayName("형태별로 시도·오답을 나눈다")
+    void formatBreakdownSplitsByFormat() {
+        ledger.saveIfAbsent(quizAnswer(1L, false));
+        ledger.saveIfAbsent(quizAnswer(2L, true));
+        ledger.saveIfAbsent(new CollectiveSignalEvent(
+                3L, chapterId, 2, "b6", DeliveryFormat.VIDEO, SignalType.QUIZ_ANSWER, true, LocalDateTime.now()));
+
+        java.util.List<com.mindplates.nextchapter.domain.signal.model.FormatBreakdown> breakdown =
+                ledger.formatBreakdown(chapterId, 2, "b6");
+
+        assertThat(breakdown)
+                .extracting(
+                        com.mindplates.nextchapter.domain.signal.model.FormatBreakdown::format,
+                        com.mindplates.nextchapter.domain.signal.model.FormatBreakdown::attemptCount,
+                        com.mindplates.nextchapter.domain.signal.model.FormatBreakdown::wrongCount)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(DeliveryFormat.WEB, 2L, 1L),
+                        org.assertj.core.groups.Tuple.tuple(DeliveryFormat.VIDEO, 1L, 0L));
+    }
+
+    @Test
+    @DisplayName("신호가 없는 블록의 형태별 분해는 비어 있다")
+    void emptyFormatBreakdownWhenNoSignals() {
+        assertThat(ledger.formatBreakdown(chapterId, 2, "b99")).isEmpty();
+    }
 }

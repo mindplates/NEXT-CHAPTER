@@ -169,7 +169,8 @@ final class ChapterBodyPrompts {
                 .orElse("- (없음)");
     }
 
-    private static JsonNode readObject(String response) {
+    /** 패키지 안의 다른 프롬프트 빌더(수정안 생성)도 같은 JSON 추출 규칙을 쓴다. */
+    static JsonNode readObject(String response) {
         if (response == null || response.isBlank()) {
             throw new ExternalApiException("본문 생성 응답이 비어 있습니다.");
         }

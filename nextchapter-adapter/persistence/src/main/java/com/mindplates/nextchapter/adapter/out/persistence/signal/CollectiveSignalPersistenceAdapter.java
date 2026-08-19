@@ -2,11 +2,14 @@ package com.mindplates.nextchapter.adapter.out.persistence.signal;
 
 import com.mindplates.nextchapter.application.signal.port.out.LoadCollectiveSignalAggregatePort;
 import com.mindplates.nextchapter.application.signal.port.out.SaveCollectiveSignalEventPort;
+import com.mindplates.nextchapter.domain.chapter.model.DeliveryFormat;
 import com.mindplates.nextchapter.domain.signal.model.BlockSignalAggregate;
 import com.mindplates.nextchapter.domain.signal.model.CollectiveSignalEvent;
+import com.mindplates.nextchapter.domain.signal.model.FormatBreakdown;
 import com.mindplates.nextchapter.domain.signal.model.SignalType;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +72,30 @@ public class CollectiveSignalPersistenceAdapter
                         rs.getLong("attempt_count"),
                         rs.getLong("wrong_count")),
                 SignalType.QUESTION.name(),
+                SignalType.QUIZ_ANSWER.name(),
+                SignalType.QUIZ_ANSWER.name(),
+                chapterId,
+                chapterVersion,
+                blockId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FormatBreakdown> formatBreakdown(Long chapterId, int chapterVersion, String blockId) {
+        return jdbcTemplate.query(
+                """
+                SELECT format,
+                       COUNT(*) FILTER (WHERE type = ?)                     AS attempt_count,
+                       COUNT(*) FILTER (WHERE type = ? AND correct = FALSE) AS wrong_count
+                  FROM collective_signal_events
+                 WHERE chapter_id = ? AND chapter_version = ? AND block_id = ?
+                 GROUP BY format
+                 ORDER BY format
+                """,
+                (rs, rowNum) -> new FormatBreakdown(
+                        DeliveryFormat.valueOf(rs.getString("format")),
+                        rs.getLong("attempt_count"),
+                        rs.getLong("wrong_count")),
                 SignalType.QUIZ_ANSWER.name(),
                 SignalType.QUIZ_ANSWER.name(),
                 chapterId,
